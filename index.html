@@ -59,9 +59,31 @@ canvas{ display:block; }
   <button id="restartBtn">पुन्हा खेळ</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div class="overlay" id="errorOverlay">
+  <h1 style="color:#e2725b;">⚠️ लोड होण्यात अडचण</h1>
+  <p id="errorMsg">3D लायब्ररी (Three.js) लोड होऊ शकली नाही — इंटरनेट कनेक्शन किंवा ब्राउझर सेटिंग्समुळे असू शकतं.</p>
+  <button onclick="location.reload()">पुन्हा प्रयत्न कर</button>
+</div>
+
+<script>
+  window.addEventListener('error', function(e){
+    const ov = document.getElementById('errorOverlay');
+    document.getElementById('errorMsg').textContent = 'तांत्रिक त्रुटी: ' + e.message;
+    ov.classList.add('show');
+    document.getElementById('startOverlay').classList.remove('show');
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+  if(typeof THREE === 'undefined'){
+    document.getElementById('errorOverlay').classList.add('show');
+    document.getElementById('startOverlay').classList.remove('show');
+  }
+</script>
 <script>
 (function(){
+  if(typeof THREE === 'undefined') return; // stop here if library failed to load
+
   // ---------- SCENE SETUP ----------
   const wrap = document.getElementById('canvas-wrap');
   const scene = new THREE.Scene();
@@ -122,8 +144,9 @@ canvas{ display:block; }
   // ---------- PLAYER ----------
   const player = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({ color:0xc9a34e, roughness:0.4, metalness:0.6, emissive:0x3a2f14, emissiveIntensity:0.4 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5,0.9,4,8), bodyMat);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.55,20,20), bodyMat);
   body.position.y = 0.95;
+  body.scale.y = 1.35;
   body.castShadow = true;
   player.add(body);
   const glow = new THREE.PointLight(0xe2bc6b, 1.2, 6);
