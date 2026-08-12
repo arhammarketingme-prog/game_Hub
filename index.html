@@ -745,8 +745,8 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
 
   // ===== PERSISTENCE (Supabase — shared across all devices/users) =====
   // ⚠️ इथे तुझ्या Supabase प्रोजेक्टचं URL आणि anon key टाक (Settings → API मध्ये मिळेल)
-  const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL_HERE';
-  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+  const SUPABASE_URL = 'https://hbwlqlvfemqrbmqdwxwr.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhid2xxbHZmZW1xcmJtcWR3eHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTg2NzMsImV4cCI6MjEwMjA3NDY3M30.MdT12IhLexwTsBA94L6ZjcQ-A8tvjEzTPhY__qxOthA';
   const SUPABASE_CONFIGURED = !SUPABASE_URL.includes('YOUR_') && !SUPABASE_ANON_KEY.includes('YOUR_');
   const sb = SUPABASE_CONFIGURED && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
   const LOCAL_KEY = 'codepath_platform_state_v1'; // localStorage fallback if Supabase isn't set up yet
