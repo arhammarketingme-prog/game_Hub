@@ -248,7 +248,17 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
       <div class="field"><label>इमेज लिंक</label><input type="url" id="aImg" placeholder="https://..."></div>
       <div class="field" id="aVideoField" style="display:none;"><label>व्हिडिओ लिंक (थेट .mp4 फाईल)</label><input type="url" id="aVideo" placeholder="https://.../video.mp4"></div>
       <div class="check-row"><input type="checkbox" id="aChildAck"><span>"मुलं" गटाला थेट जाहिराती दाखवल्या जात नाहीत, हे मला माहीत आहे.</span></div>
-      <button class="btn" id="submitAdBtn" style="width:100%;">पडताळणीसाठी सबमिट कर</button>
+
+      <div class="info-strip" style="border-left-color:var(--good);">
+        <b style="color:var(--good);">पेमेंट डिटेल्स (डेमो)</b><br>
+        UPI ID: <b>codepath@upi</b> (उदाहरण — खरं ID गेटवे जोडल्यावर बदलेल)<br>
+        जाहिरात सूचीकरण शुल्क: <b>₹500</b><br>
+        पैसे भरल्यावर मिळालेला <b>Transaction/UTR ID</b> खाली टाक — सिस्टीम आपोआप जुळवून बघेल.
+      </div>
+      <div class="field"><label>Transaction / UTR ID</label><input type="text" id="aTxnId" placeholder="उदा. TXN123456"></div>
+      <div id="paymentStatusMsg" style="font-size:12px; margin-bottom:10px; min-height:16px;"></div>
+
+      <button class="btn" id="submitAdBtn" style="width:100%;">पेमेंट तपासून सबमिट कर</button>
     </div>
     <div id="adBannerZone"></div>
     <div class="store-grid" id="storeGrid"></div>
@@ -288,6 +298,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   let profile = null;
@@ -313,7 +324,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   const GROUP_SUB = { kids:'Playtime Mode', teen:'Level Up Mode', college:'Campus Mode', adult:'Pro Mode', senior:'Wisdom Mode' };
   const AGE_LABEL = { all:'सर्व', kids:'मुलं', teen:'टीन', college:'कॉलेज', adult:'प्रगल्भ', senior:'ज्येष्ठ' };
 
-  el('loginBtn').addEventListener('click', ()=>{
+  el('loginBtn').addEventListener('click', async ()=>{
     const name = el('nameInput').value.trim();
     const dob = el('dobInput').value;
     const err = el('loginErr');
@@ -323,6 +334,9 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
     if(age<0||age>110){ err.textContent='योग्य जन्मतारीख टाक.'; return; }
     profile = { name, dob, age, group: ageGroup(age) };
     err.textContent='';
+    el('loginBtn').textContent = 'लोड होत आहे...'; el('loginBtn').disabled = true;
+    await stateLoadPromise; // make sure shared data (Supabase or local) has finished loading first
+    el('loginBtn').textContent = 'प्रवेश कर'; el('loginBtn').disabled = false;
     startApp();
   });
 
@@ -346,11 +360,13 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   });
   // ===================== TABS =====================
   document.querySelectorAll('.tab').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
+    tab.addEventListener('click', async ()=>{
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
       tab.classList.add('active');
       el('view-'+tab.dataset.view).classList.add('active');
+      const sharedViews = ['community','gamestore','team'];
+      if(sharedViews.includes(tab.dataset.view)) await loadState(); // pull latest from other devices
       if(tab.dataset.view==='community') renderPuzzles();
       if(tab.dataset.view==='gamestore') renderStore();
       if(tab.dataset.view==='team') renderTeamPanel();
@@ -675,7 +691,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
     const opts=[el('opt0').value.trim(),el('opt1').value.trim(),el('opt2').value.trim(),el('opt3').value.trim()];
     if(!q||opts.some(o=>!o)){ showToast('कृपया प्रश्न आणि सर्व 4 पर्याय भर.'); return; }
     const flagged = autoFlagCheck(q+' '+opts.join(' '));
-    submissions.push({ id:'sub'+Date.now(), creator:getUserName(), category:el('catSel').value, age:el('ageSel').value, q, options:opts, answer:Number(el('correctSel').value), flagged });
+    submissions.push({ id:'sub'+Date.now(), creator:getUserName(), category:el('catSel').value, age:el('ageSel').value, q, options:opts, answer:Number(el('correctSel').value), flagged }); persistState();
     el('qText').value=''; el('opt0').value=''; el('opt1').value=''; el('opt2').value=''; el('opt3').value='';
     showToast(flagged?'⚠ ऑटो-फिल्टरने संशयास्पद शब्द शोधले — अतिरिक्त पडताळणी लागेल.':'प्रश्न पडताळणीसाठी पाठवला!');
     el('submitFormCard').style.display='none';
@@ -699,7 +715,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
         e.stopPropagation();
         if(!confirm('हे कंटेंट अयोग्य म्हणून रिपोर्ट करायचं?')) return;
         approvedQuestions = approvedQuestions.filter(x=>x.id!==item.id);
-        reportedQuestions.push(item);
+        reportedQuestions.push(item); persistState();
         showToast('रिपोर्ट नोंदवला.'); renderPuzzles();
       });
       const optList = d.querySelector('.opt-list');
@@ -711,7 +727,8 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
           if(i===item.answer){ o.classList.add('correct'); item.score=(item.score||0)+10; playerScore+=10; }
           else o.classList.add('wrong');
           const zone = d.querySelector('.ad-zone');
-          const creatorRef = { name:item.creator, isSelf, earnFn:(c)=>{ item.creatorEarned=(item.creatorEarned||0)+c; } };
+          const creatorRef = { name:item.creator, isSelf, earnFn:(c)=>{ item.creatorEarned=(item.creatorEarned||0)+c; persistState(); } };
+          persistState();
           registerAttempt(creatorRef, ()=>{ setTimeout(renderPuzzles, 900); });
         });
         optList.appendChild(o);
@@ -726,13 +743,67 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   let games = [ { id:'g1', name:'शब्दकोडं', desc:'मराठी शब्दांचं कोडं', url:'https://example.com/demo-game', thumb:'', category:'ज्ञानकोश', age:'college', dev:'रोहन स्टुडिओ', status:'live' } ];
   let ads = [];
 
+  // ===== PERSISTENCE (Supabase — shared across all devices/users) =====
+  // ⚠️ इथे तुझ्या Supabase प्रोजेक्टचं URL आणि anon key टाक (Settings → API मध्ये मिळेल)
+  const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL_HERE';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+  const SUPABASE_CONFIGURED = !SUPABASE_URL.includes('YOUR_') && !SUPABASE_ANON_KEY.includes('YOUR_');
+  const sb = SUPABASE_CONFIGURED && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  const LOCAL_KEY = 'codepath_platform_state_v1'; // localStorage fallback if Supabase isn't set up yet
+
+  async function persistState(){
+    const snapshot = { games, ads, submissions, approvedQuestions, reportedQuestions };
+    if(sb){
+      try {
+        await sb.from('platform_state').update({ data: snapshot, updated_at: new Date().toISOString() }).eq('id', 1);
+        return;
+      } catch(e){ console.warn('Supabase save failed, falling back to local:', e); }
+    }
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(snapshot)); } catch(e){ console.warn('local save failed', e); }
+  }
+  async function loadState(){
+    if(sb){
+      try {
+        const { data, error } = await sb.from('platform_state').select('data').eq('id', 1).single();
+        if(!error && data && data.data){
+          applyState(data.data);
+          return;
+        }
+      } catch(e){ console.warn('Supabase load failed, falling back to local:', e); }
+    }
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      if(raw) applyState(JSON.parse(raw));
+    } catch(e){ console.warn('local load failed', e); }
+  }
+  function applyState(d){
+    if(d.games) games = d.games;
+    if(d.ads) ads = d.ads;
+    if(d.submissions) submissions = d.submissions;
+    if(d.approvedQuestions) approvedQuestions = d.approvedQuestions;
+    if(d.reportedQuestions) reportedQuestions = d.reportedQuestions;
+  }
+  const stateLoadPromise = loadState();
+  // Simulates what a real payment gateway webhook (Razorpay/Cashfree) would deliver automatically.
+  // In production this array would NOT be typed by anyone — it would be pushed here by a server
+  // every time the gateway confirms a real payment. Two sample entries here so you can test both
+  // outcomes: a matching Transaction ID (auto-verified) and a non-matching one (needs manual check).
+  const AD_LISTING_FEE = 500;
+  const incomingBankFeed = [
+    { txnId:'TXN123456', amount:500 },
+    { txnId:'UPI998877', amount:500 },
+  ];
+  function checkPayment(txnId){
+    return incomingBankFeed.find(t => t.txnId.toLowerCase()===txnId.toLowerCase() && t.amount===AD_LISTING_FEE);
+  }
+
   el('submitGameBtn').addEventListener('click', ()=>{
     const name=el('gName').value.trim(), desc=el('gDesc').value.trim(), url=el('gUrl').value.trim();
     if(!name||!desc||!url){ showToast('कृपया नाव, वर्णन आणि लिंक भर.'); return; }
     if(!/^https?:\/\//i.test(url)){ showToast('लिंक http:// किंवा https:// ने सुरू व्हायला हवी.'); return; }
     if(!el('gDataAck').checked){ showToast('कृपया डेटा-जबाबदारीची अट मान्य कर.'); return; }
     if(!el('gAdAck').checked){ showToast('कृपया जाहिरात-कमाईची अट मान्य कर.'); return; }
-    games.push({ id:'g'+Date.now(), name, desc, url, thumb:el('gThumb').value.trim(), category:el('gCat').value, age:el('gAge').value, admobId:el('gAdmobId').value.trim(), dev:getUserName(), status:'pending' });
+    games.push({ id:'g'+Date.now(), name, desc, url, thumb:el('gThumb').value.trim(), category:el('gCat').value, age:el('gAge').value, admobId:el('gAdmobId').value.trim(), dev:getUserName(), status:'pending' }); persistState();
     ['gName','gDesc','gUrl','gThumb','gAdmobId'].forEach(id=>el(id).value=''); el('gDataAck').checked=false; el('gAdAck').checked=false;
     showToast('गेम पडताळणीसाठी पाठवला!'); el('gameFormCard').style.display='none'; renderMySubs();
   });
@@ -742,12 +813,24 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   });
   el('submitAdBtn').addEventListener('click', ()=>{
     const name=el('aName').value.trim(), title=el('aTitle').value.trim(), type=el('aType').value;
+    const txnId = el('aTxnId').value.trim();
+    const statusMsg = el('paymentStatusMsg');
     if(!name||!title){ showToast('कृपया नाव आणि मजकूर भर.'); return; }
     if(!el('aChildAck').checked){ showToast('कृपया बालसुरक्षा अट मान्य कर.'); return; }
     if(type==='video' && !el('aVideo').value.trim()){ showToast('कृपया व्हिडिओ लिंक भर.'); return; }
-    ads.push({ id:'a'+Date.now(), brand:name, title, type, img:el('aImg').value.trim(), video:el('aVideo').value.trim(), advertiser:getUserName(), status:'pending' });
-    ['aName','aTitle','aImg','aVideo'].forEach(id=>el(id).value=''); el('aChildAck').checked=false; el('aType').value='image'; el('aVideoField').style.display='none';
-    showToast('जाहिरात पडताळणीसाठी पाठवली!'); el('adFormCard').style.display='none';
+    if(!txnId){ statusMsg.style.color='var(--bad)'; statusMsg.textContent='कृपया Transaction/UTR ID टाक.'; return; }
+
+    const matched = checkPayment(txnId);
+    const paymentStatus = matched ? 'verified' : 'manual_review';
+    ads.push({ id:'a'+Date.now(), brand:name, title, type, img:el('aImg').value.trim(), video:el('aVideo').value.trim(), advertiser:getUserName(), txnId, paymentStatus, status:'pending' }); persistState();
+
+    if(matched){
+      statusMsg.style.color='var(--good)'; statusMsg.textContent='✓ पेमेंट आपोआप जुळलं आणि पडताळलं गेलं!';
+    } else {
+      statusMsg.style.color='var(--accent)'; statusMsg.textContent='⏳ हा Transaction ID आपोआप जुळला नाही — टीमकडून मॅन्युअली तपासलं जाईल.';
+    }
+    ['aName','aTitle','aImg','aVideo','aTxnId'].forEach(id=>el(id).value=''); el('aChildAck').checked=false; el('aType').value='image'; el('aVideoField').style.display='none';
+    showToast('जाहिरात पडताळणीसाठी पाठवली!'); 
   });
 
   function renderStore(){
@@ -824,9 +907,10 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
         if(s.flagged && !confirm('ऑटो-फ्लॅग झालेलं आहे. तरीही मंजूर करायचं?')) return;
         submissions = submissions.filter(x=>x.id!==s.id);
         approvedQuestions.push({ id:s.id, creator:s.creator, category:s.category, age:s.age, q:s.q, options:s.options, answer:s.answer, plays:0, score:0, creatorEarned:0 });
+        persistState();
         showToast('मंजूर झालं!'); renderTeamPanel(); renderPuzzles();
       });
-      d.querySelector('.reject-b').addEventListener('click', ()=>{ submissions=submissions.filter(x=>x.id!==s.id); showToast('नाकारलं.'); renderTeamPanel(); });
+      d.querySelector('.reject-b').addEventListener('click', ()=>{ submissions=submissions.filter(x=>x.id!==s.id); persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
 
@@ -837,8 +921,8 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
       const d=document.createElement('div'); d.className='list-item'; d.style.borderColor='var(--bad)';
       d.innerHTML = `<div class="meta-row"><span class="tag">${item.category}</span> — ${item.creator}</div><div class="q-text">${item.q}</div>
         <div class="actions-row"><button class="btn small approve-b">✓ परत मंजूर</button><button class="btn small ghost reject-b">✕ कायमचं काढा</button></div>`;
-      d.querySelector('.approve-b').addEventListener('click', ()=>{ reportedQuestions=reportedQuestions.filter(x=>x.id!==item.id); approvedQuestions.push(item); showToast('परत मंजूर.'); renderTeamPanel(); renderPuzzles(); });
-      d.querySelector('.reject-b').addEventListener('click', ()=>{ reportedQuestions=reportedQuestions.filter(x=>x.id!==item.id); showToast('कायमचं काढलं.'); renderTeamPanel(); });
+      d.querySelector('.approve-b').addEventListener('click', ()=>{ reportedQuestions=reportedQuestions.filter(x=>x.id!==item.id); approvedQuestions.push(item); persistState(); showToast('परत मंजूर.'); renderTeamPanel(); renderPuzzles(); });
+      d.querySelector('.reject-b').addEventListener('click', ()=>{ reportedQuestions=reportedQuestions.filter(x=>x.id!==item.id); persistState(); showToast('कायमचं काढलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
 
@@ -853,8 +937,8 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
         <div class="meta-row" style="word-break:break-all;">🔗 ${g.url}</div>
         <div class="meta-row">💰 जाहिरात-खातं: ${g.admobId ? g.admobId : 'दिलेलं नाही (जाहिरातीशिवाय गेम)'}</div>
         <div class="actions-row"><a href="${g.url}" target="_blank" rel="noopener noreferrer"><button class="btn small ghost">↗ टेस्ट करा</button></a><button class="btn small approve-b">✓ लाईव्ह कर</button><button class="btn small ghost reject-b">✕ नाकार</button></div>`;
-      d.querySelector('.approve-b').addEventListener('click', ()=>{ g.status='live'; showToast('गेम लाईव्ह!'); renderTeamPanel(); renderStore(); });
-      d.querySelector('.reject-b').addEventListener('click', ()=>{ g.status='rejected'; showToast('नाकारलं.'); renderTeamPanel(); });
+      d.querySelector('.approve-b').addEventListener('click', ()=>{ g.status='live'; persistState(); showToast('गेम लाईव्ह!'); renderTeamPanel(); renderStore(); });
+      d.querySelector('.reject-b').addEventListener('click', ()=>{ g.status='rejected'; persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
 
@@ -864,10 +948,20 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
     if(pendingAds.length===0) box.appendChild(emptyNote('सध्या प्रलंबित जाहिराती नाहीत.'));
     pendingAds.forEach(a=>{
       const d=document.createElement('div'); d.className='list-item';
+      const isVerified = a.paymentStatus==='verified';
+      d.style.borderColor = isVerified ? 'var(--good)' : 'var(--accent)';
       d.innerHTML = `<div class="g-name">${a.brand}</div><div class="g-desc">${a.title}</div>
-        <div class="actions-row"><button class="btn small approve-b">✓ लाईव्ह कर</button><button class="btn small ghost reject-b">✕ नाकार</button></div>`;
-      d.querySelector('.approve-b').addEventListener('click', ()=>{ a.status='live'; showToast('जाहिरात लाईव्ह!'); renderTeamPanel(); renderStore(); });
-      d.querySelector('.reject-b').addEventListener('click', ()=>{ a.status='rejected'; showToast('नाकारलं.'); renderTeamPanel(); });
+        <div class="meta-row">Txn ID: <b>${a.txnId||'—'}</b></div>
+        <div class="meta-row">${isVerified ? '<span class="tag status-live">✓ पेमेंट आपोआप पडताळलं</span>' : '<span class="tag" style="color:var(--accent);">⏳ पेमेंट मॅन्युअली तपासा</span>'}</div>
+        <div class="actions-row">
+          ${isVerified ? '' : '<button class="btn small verify-b">✓ पेमेंट मंजूर (बँक स्टेटमेंट तपासलं)</button>'}
+          <button class="btn small approve-b" ${isVerified ? '' : 'disabled'}>✓ लाईव्ह कर</button>
+          <button class="btn small ghost reject-b">✕ नाकार</button>
+        </div>`;
+      const verifyBtn = d.querySelector('.verify-b');
+      if(verifyBtn) verifyBtn.addEventListener('click', ()=>{ a.paymentStatus='verified'; persistState(); showToast('पेमेंट मॅन्युअली मंजूर केलं.'); renderTeamPanel(); });
+      d.querySelector('.approve-b').addEventListener('click', ()=>{ if(a.paymentStatus!=='verified') return; a.status='live'; persistState(); showToast('जाहिरात लाईव्ह!'); renderTeamPanel(); renderStore(); });
+      d.querySelector('.reject-b').addEventListener('click', ()=>{ a.status='rejected'; persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
   }
