@@ -291,6 +291,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
   <div class="login-card" style="max-width:320px;">
     <h1 style="font-size:20px;">🔒 टीम लॉगिन</h1>
     <div class="tag" style="display:block;">फक्त पडताळणीकृत टीम सदस्यांसाठी</div>
+    <div class="field"><label>युजरनेम</label><input type="text" id="adminUserInput" placeholder="युजरनेम टाक"></div>
     <div class="field"><label>पासवर्ड</label><input type="password" id="adminPassInput" placeholder="पासवर्ड टाक"></div>
     <div class="login-err" id="adminLoginErr"></div>
     <button class="login-btn" id="adminLoginSubmit">लॉगिन कर</button>
@@ -383,36 +384,45 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     el('view-game').classList.add('active');
   }
-  // ===== ADMIN / TEAM LOGIN =====
-  const ADMIN_PASSWORD = 'admin123'; // demo only — real system needs server-side auth, not a hardcoded client-side password
+  // ===== ADMIN / TEAM LOGIN (role-based, demo only — real system needs server-side auth) =====
+  const ADMIN_ACCOUNTS = [
+    { username:'abhinay', password:'admin123', name:'अभिनय', role:'मुख्य प्रशासक' },
+    { username:'team1', password:'team123', name:'टीम सदस्य 1', role:'मॉडरेटर' },
+  ];
   let isTeamMode = false;
+  let currentAdmin = null; // { name, role }
+
   el('teamLoginBtn').addEventListener('click', ()=>{
     if(isTeamMode){
-      isTeamMode = false;
+      isTeamMode = false; currentAdmin = null;
       el('teamLoginBtn').textContent = '🔒 टीम लॉगिन';
       el('platformAdConfig').style.display = 'none';
       showToast('टीम मोडमधून बाहेर पडलास.');
       renderTeamPanel();
       return;
     }
-    el('adminPassInput').value = '';
+    el('adminUserInput').value = ''; el('adminPassInput').value = '';
     el('adminLoginErr').textContent = '';
     el('adminOverlay').classList.add('show');
-    el('adminPassInput').focus();
+    el('adminUserInput').focus();
   });
   el('adminLoginCancel').addEventListener('click', ()=> el('adminOverlay').classList.remove('show'));
   el('adminLoginSubmit').addEventListener('click', attemptAdminLogin);
   el('adminPassInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptAdminLogin(); });
+  el('adminUserInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') el('adminPassInput').focus(); });
   function attemptAdminLogin(){
-    if(el('adminPassInput').value === ADMIN_PASSWORD){
-      isTeamMode = true;
+    const u = el('adminUserInput').value.trim().toLowerCase();
+    const p = el('adminPassInput').value;
+    const match = ADMIN_ACCOUNTS.find(a => a.username===u && a.password===p);
+    if(match){
+      isTeamMode = true; currentAdmin = { name: match.name, role: match.role };
       el('adminOverlay').classList.remove('show');
-      el('teamLoginBtn').textContent = '🔓 टीम मोड (लॉगआउट)';
+      el('teamLoginBtn').textContent = `🔓 ${match.name} (लॉगआउट)`;
       el('platformAdConfig').style.display = 'block';
-      showToast('टीम मोड चालू झाला.');
+      showToast(`स्वागत, ${match.name}! (${match.role})`);
       renderTeamPanel();
     } else {
-      el('adminLoginErr').textContent = 'चुकीचा पासवर्ड.';
+      el('adminLoginErr').textContent = 'युजरनेम किंवा पासवर्ड चुकीचा.';
     }
   }
   el('adFreqInput').addEventListener('change', (e)=>{
@@ -892,6 +902,9 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
     const box = el('teamContent'); if(!box) return;
     if(!isTeamMode){ box.innerHTML = '<div class="empty-note">वरती "🔒 टीम लॉगिन" वापरून लॉगिन कर.</div>'; return; }
     box.innerHTML = '';
+    const idCard=document.createElement('div'); idCard.className='info-strip';
+    idCard.innerHTML = `👤 लॉगिन: <b>${currentAdmin.name}</b> · भूमिका: <b>${currentAdmin.role}</b>`;
+    box.appendChild(idCard);
 
     // pending questions
     const h1=document.createElement('h2'); h1.className='sec-title'; h1.textContent='प्रलंबित कोडी'; box.appendChild(h1);
@@ -906,7 +919,7 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
       d.querySelector('.approve-b').addEventListener('click', ()=>{
         if(s.flagged && !confirm('ऑटो-फ्लॅग झालेलं आहे. तरीही मंजूर करायचं?')) return;
         submissions = submissions.filter(x=>x.id!==s.id);
-        approvedQuestions.push({ id:s.id, creator:s.creator, category:s.category, age:s.age, q:s.q, options:s.options, answer:s.answer, plays:0, score:0, creatorEarned:0 });
+        approvedQuestions.push({ id:s.id, creator:s.creator, category:s.category, age:s.age, q:s.q, options:s.options, answer:s.answer, plays:0, score:0, creatorEarned:0, reviewedBy: currentAdmin.name });
         persistState();
         showToast('मंजूर झालं!'); renderTeamPanel(); renderPuzzles();
       });
@@ -936,9 +949,10 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
         <div class="meta-row"><span class="tag">${g.category}</span><span class="tag">${AGE_LABEL[g.age]}</span>डेव्ह: ${g.dev}</div>
         <div class="meta-row" style="word-break:break-all;">🔗 ${g.url}</div>
         <div class="meta-row">💰 जाहिरात-खातं: ${g.admobId ? g.admobId : 'दिलेलं नाही (जाहिरातीशिवाय गेम)'}</div>
+        ${g.reviewedBy ? `<div class="meta-row">👤 आधी पडताळलं: ${g.reviewedBy}</div>` : ''}
         <div class="actions-row"><a href="${g.url}" target="_blank" rel="noopener noreferrer"><button class="btn small ghost">↗ टेस्ट करा</button></a><button class="btn small approve-b">✓ लाईव्ह कर</button><button class="btn small ghost reject-b">✕ नाकार</button></div>`;
-      d.querySelector('.approve-b').addEventListener('click', ()=>{ g.status='live'; persistState(); showToast('गेम लाईव्ह!'); renderTeamPanel(); renderStore(); });
-      d.querySelector('.reject-b').addEventListener('click', ()=>{ g.status='rejected'; persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
+      d.querySelector('.approve-b').addEventListener('click', ()=>{ g.status='live'; g.reviewedBy=currentAdmin.name; persistState(); showToast('गेम लाईव्ह!'); renderTeamPanel(); renderStore(); });
+      d.querySelector('.reject-b').addEventListener('click', ()=>{ g.status='rejected'; g.reviewedBy=currentAdmin.name; persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
 
@@ -959,8 +973,8 @@ body.theme-senior{ --bg:#faf5ea; --panel:#ffffff; --panel2:#fbf3e2; --text:#2a24
           <button class="btn small ghost reject-b">✕ नाकार</button>
         </div>`;
       const verifyBtn = d.querySelector('.verify-b');
-      if(verifyBtn) verifyBtn.addEventListener('click', ()=>{ a.paymentStatus='verified'; persistState(); showToast('पेमेंट मॅन्युअली मंजूर केलं.'); renderTeamPanel(); });
-      d.querySelector('.approve-b').addEventListener('click', ()=>{ if(a.paymentStatus!=='verified') return; a.status='live'; persistState(); showToast('जाहिरात लाईव्ह!'); renderTeamPanel(); renderStore(); });
+      if(verifyBtn) verifyBtn.addEventListener('click', ()=>{ a.paymentStatus='verified'; a.paymentVerifiedBy=currentAdmin.name; persistState(); showToast('पेमेंट मॅन्युअली मंजूर केलं.'); renderTeamPanel(); });
+      d.querySelector('.approve-b').addEventListener('click', ()=>{ if(a.paymentStatus!=='verified') return; a.status='live'; a.reviewedBy=currentAdmin.name; persistState(); showToast('जाहिरात लाईव्ह!'); renderTeamPanel(); renderStore(); });
       d.querySelector('.reject-b').addEventListener('click', ()=>{ a.status='rejected'; persistState(); showToast('नाकारलं.'); renderTeamPanel(); });
       box.appendChild(d);
     });
