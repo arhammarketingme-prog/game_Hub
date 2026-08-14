@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>फासा फेक — कोडपथ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:26px 16px;}
+h1{font-family:'Fraunces',serif; color:#e2bc6b; font-size:24px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:12px; margin-bottom:18px; text-align:center;}
+.hud{display:flex; gap:10px; margin-bottom:20px;}
+.box{background:#20242f; border:1px solid rgba(201,163,78,0.3); border-radius:10px; padding:7px 16px; text-align:center;}
+.box .lbl{font-size:9px; color:#b8b2a4;} .box .val{font-size:16px; font-weight:700; color:#e2bc6b;}
+.dice{width:90px; height:90px; background:#ede6d6; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:42px; font-weight:700; color:#12141c; margin-bottom:20px;}
+.picks{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;}
+.pick{width:44px; height:44px; border-radius:10px; background:#20242f; border:2px solid rgba(201,163,78,0.3); color:#ede6d6; font-weight:700; font-size:16px; cursor:pointer;}
+.pick.selected{background:#c9a34e; color:#12141c;}
+.rollbtn{background:#c9a34e; color:#12141c; border:none; border-radius:10px; padding:11px 24px; font-weight:700; cursor:pointer;}
+.result{margin-top:14px; font-size:15px; font-weight:700; min-height:22px;}
+.result.win{color:#4ecca3;} .result.lose{color:#e2725b;}
+</style></head>
+<body>
+<h1>🎲 फासा फेक</h1>
+<div class="sub">आकडा निवड, मग फासा फेक — बरोबर आलं तर गुण!</div>
+<div class="hud"><div class="box"><div class="lbl">गुण</div><div class="val" id="score">0</div></div></div>
+<div class="dice" id="dice">🎲</div>
+<div class="picks" id="picks"></div>
+<button class="rollbtn" id="rollBtn">फासा फेक</button>
+<div class="result" id="result"></div>
+<script>
+let selected=null, score=0;
+const picksEl=document.getElementById('picks');
+for(let i=1;i<=6;i++){
+  const b=document.createElement('button'); b.className='pick'; b.textContent=i;
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.pick').forEach(p=>p.classList.remove('selected'));
+    b.classList.add('selected'); selected=i;
+  });
+  picksEl.appendChild(b);
+}
+document.getElementById('rollBtn').addEventListener('click', ()=>{
+  if(!selected){ document.getElementById('result').textContent='आधी आकडा निवड!'; return; }
+  const dice=document.getElementById('dice');
+  let count=0;
+  const spin=setInterval(()=>{
+    dice.textContent = 1+Math.floor(Math.random()*6);
+    count++;
+    if(count>10){
+      clearInterval(spin);
+      const roll=1+Math.floor(Math.random()*6);
+      dice.textContent=roll;
+      const resultEl=document.getElementById('result');
+      if(roll===selected){ score+=50; resultEl.textContent='🎉 बरोबर! +50 गुण'; resultEl.className='result win'; }
+      else { resultEl.textContent=`चुकलं — फासा ${roll} आला होता.`; resultEl.className='result lose'; }
+      document.getElementById('score').textContent=score;
+    }
+  }, 80);
+});
+</script>
+</body></html>

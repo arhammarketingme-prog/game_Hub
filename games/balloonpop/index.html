@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>फुगा फोडा — कोडपथ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; height:100%; overflow:hidden; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace;}
+.hud{position:fixed; top:14px; left:0; right:0; display:flex; justify-content:center; gap:10px; z-index:5;}
+.box{background:#20242f; border:1px solid rgba(226,114,91,0.3); border-radius:10px; padding:7px 16px; text-align:center;}
+.box .lbl{font-size:9px; color:#b8b2a4;} .box .val{font-size:16px; font-weight:700; color:#e2725b;}
+#arena{position:fixed; inset:0;}
+.balloon{position:absolute; width:50px; height:64px; border-radius:50% 50% 50% 50%/60% 60% 40% 40%; cursor:pointer;}
+.overlay{position:fixed; inset:0; background:rgba(6,7,11,0.9); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; z-index:10;}
+.overlay.show{display:flex;}
+.overlay h1{font-family:'Fraunces',serif; font-size:24px; margin:0 0 8px; color:#e2bc6b;}
+.overlay button{background:#e2725b; color:#fff; border:none; border-radius:10px; padding:12px 24px; font-weight:700; cursor:pointer; margin-top:14px;}
+</style></head>
+<body>
+<div class="hud">
+  <div class="box"><div class="lbl">स्कोअर</div><div class="val" id="score">0</div></div>
+  <div class="box"><div class="lbl">वेळ</div><div class="val" id="time">30</div></div>
+</div>
+<div id="arena"></div>
+<div class="overlay show" id="startOv">
+  <h1>🎈 फुगा फोडा</h1>
+  <p style="color:#b8b2a4; font-size:13px; max-width:260px;">30 सेकंदात जितके शक्य तितके फुगे फोड — पण काळे फुगे टाळ!</p>
+  <button id="startBtn">सुरू कर</button>
+</div>
+<div class="overlay" id="overOv">
+  <h1>वेळ संपली!</h1>
+  <p id="finalTxt" style="color:#b8b2a4;"></p>
+  <button id="retryBtn">पुन्हा खेळ</button>
+</div>
+<script>
+const COLORS=['#e2725b','#4ecca3','#3b82f6','#e2bc6b','#f472b6'];
+let score=0, timeLeft=30, running=false, spawnTimer, clockTimer;
+const arena=document.getElementById('arena');
+function spawnBalloon(){
+  if(!running) return;
+  const b=document.createElement('div');
+  const isBad = Math.random()<0.15;
+  b.className='balloon';
+  b.style.background = isBad ? '#1a1a1a' : COLORS[Math.floor(Math.random()*COLORS.length)];
+  b.style.left = (Math.random()*(arena.clientWidth-50))+'px';
+  b.style.top = arena.clientHeight+'px';
+  b.dataset.bad = isBad ? '1':'0';
+  arena.appendChild(b);
+  const duration = 3000+Math.random()*1500;
+  const start=performance.now();
+  function rise(t){
+    if(!running || !b.parentNode) return;
+    const progress=(t-start)/duration;
+    if(progress>=1){ b.remove(); return; }
+    b.style.top = (arena.clientHeight - progress*(arena.clientHeight+70))+'px';
+    requestAnimationFrame(rise);
+  }
+  requestAnimationFrame(rise);
+  b.addEventListener('click', ()=>{
+    if(!running) return;
+    if(b.dataset.bad==='1'){ score=Math.max(0,score-3); } else { score++; }
+    document.getElementById('score').textContent=score;
+    b.remove();
+  });
+  spawnTimer=setTimeout(spawnBalloon, 400+Math.random()*400);
+}
+function start(){
+  score=0; timeLeft=30; running=true;
+  document.getElementById('score').textContent=0; document.getElementById('time').textContent=30;
+  document.getElementById('startOv').classList.remove('show');
+  document.getElementById('overOv').classList.remove('show');
+  arena.innerHTML='';
+  spawnBalloon();
+  clockTimer=setInterval(()=>{
+    timeLeft--; document.getElementById('time').textContent=timeLeft;
+    if(timeLeft<=0) end();
+  }, 1000);
+}
+function end(){
+  running=false; clearTimeout(spawnTimer); clearInterval(clockTimer);
+  arena.innerHTML='';
+  document.getElementById('finalTxt').textContent=`स्कोअर: ${score}`;
+  document.getElementById('overOv').classList.add('show');
+}
+document.getElementById('startBtn').addEventListener('click', start);
+document.getElementById('retryBtn').addEventListener('click', start);
+</script>
+</body></html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>रंग जुळवा — कोडपथ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:24px 16px;}
+h1{font-family:'Fraunces',serif; color:#f472b6; font-size:24px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:12px; margin-bottom:14px; text-align:center;}
+.hud{display:flex; gap:10px; margin-bottom:18px;}
+.box{background:#20242f; border:1px solid rgba(244,114,182,0.3); border-radius:10px; padding:7px 16px; text-align:center;}
+.box .lbl{font-size:9px; color:#b8b2a4;} .box .val{font-size:16px; font-weight:700; color:#f472b6;}
+.wordbox{font-size:40px; font-weight:700; margin-bottom:26px; height:56px;}
+.opts{display:grid; grid-template-columns:1fr 1fr; gap:12px; width:min(85vw,300px);}
+.opt{padding:16px; border-radius:12px; border:none; font-weight:700; font-size:15px; color:#fff; cursor:pointer;}
+.startbtn{margin-top:18px; background:#f472b6; color:#12141c; border:none; border-radius:10px; padding:10px 20px; font-weight:700; cursor:pointer;}
+.result{margin-top:14px; color:#4ecca3; font-size:14px;}
+</style></head>
+<body>
+<h1>🎨 रंग जुळवा</h1>
+<div class="sub">शब्दाचा <b>अर्थ</b> नाही, तो ज्या <b>रंगात लिहिलाय</b> तो निवड</div>
+<div class="hud">
+  <div class="box"><div class="lbl">स्कोअर</div><div class="val" id="score">0</div></div>
+  <div class="box"><div class="lbl">वेळ</div><div class="val" id="time">30</div></div>
+</div>
+<div class="wordbox" id="wordbox"></div>
+<div class="opts" id="opts"></div>
+<button class="startbtn" id="startBtn">सुरू कर</button>
+<div class="result" id="result"></div>
+<script>
+const COLORS=[{name:'लाल',hex:'#e2725b'},{name:'हिरवा',hex:'#4ecca3'},{name:'निळा',hex:'#3b82f6'},{name:'पिवळा',hex:'#e2bc6b'}];
+let score=0, timeLeft=30, running=false, timer, correctColor;
+function newRound(){
+  const wordColor=COLORS[Math.floor(Math.random()*COLORS.length)];
+  const inkColor=COLORS[Math.floor(Math.random()*COLORS.length)];
+  correctColor=inkColor.hex;
+  const wb=document.getElementById('wordbox');
+  wb.textContent=wordColor.name; wb.style.color=inkColor.hex;
+  const opts=document.getElementById('opts'); opts.innerHTML='';
+  const shuffled=[...COLORS].sort(()=>Math.random()-0.5);
+  shuffled.forEach(c=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=c.name; b.style.background=c.hex;
+    b.addEventListener('click', ()=>{
+      if(!running) return;
+      if(c.hex===correctColor){ score++; document.getElementById('score').textContent=score; }
+      else score=Math.max(0,score-1), document.getElementById('score').textContent=score;
+      newRound();
+    });
+    opts.appendChild(b);
+  });
+}
+function start(){
+  score=0; timeLeft=30; running=true; document.getElementById('result').textContent='';
+  document.getElementById('score').textContent=0; document.getElementById('time').textContent=30;
+  newRound();
+  clearInterval(timer);
+  timer=setInterval(()=>{ timeLeft--; document.getElementById('time').textContent=timeLeft; if(timeLeft<=0) finish(); }, 1000);
+}
+function finish(){
+  running=false; clearInterval(timer);
+  document.getElementById('opts').innerHTML=''; document.getElementById('wordbox').textContent='';
+  document.getElementById('result').textContent=`पूर्ण! स्कोअर: ${score}`;
+}
+document.getElementById('startBtn').addEventListener('click', start);
+</script>
+</body></html>

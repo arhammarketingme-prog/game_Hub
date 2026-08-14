@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>टिक-टॅक-टो — कोडपथ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:24px 16px;}
+h1{font-family:'Fraunces',serif; color:#3b82f6; font-size:26px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:12px; margin-bottom:14px; text-align:center;}
+.turn{background:#20242f; border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:8px 18px; margin-bottom:16px; font-weight:700; font-size:14px;}
+.turn .x{color:#3b82f6;} .turn .o{color:#f472b6;}
+#board{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:min(85vw,300px); aspect-ratio:1;}
+.cell{background:#20242f; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:44px; font-weight:700; cursor:pointer;}
+.cell.x{color:#3b82f6;} .cell.o{color:#f472b6;}
+.cell.win{background:#1c2a25; box-shadow:0 0 0 2px #4ecca3 inset;}
+.msg{margin-top:16px; font-size:15px; color:#4ecca3; min-height:22px; text-align:center;}
+.newbtn{margin-top:14px; background:#3b82f6; color:#fff; border:none; border-radius:10px; padding:10px 20px; font-weight:700; font-size:13px; cursor:pointer;}
+</style>
+</head>
+<body>
+<h1>⭕ टिक-टॅक-टो</h1>
+<div class="sub">दोघे मिळून एकाच डिव्हाइसवर खेळा — आळीपाळीने टॅप करा</div>
+<div class="turn">आत्ताची पाळी: <span id="turnLabel" class="x">X</span></div>
+<div id="board"></div>
+<div class="msg" id="msg"></div>
+<button class="newbtn" id="newBtn">नवीन खेळ</button>
+<script>
+let board, current, over;
+const boardEl=document.getElementById('board'), turnEl=document.getElementById('turnLabel'), msgEl=document.getElementById('msg');
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function init(){
+  board=Array(9).fill(null); current='X'; over=false;
+  msgEl.textContent=''; turnEl.textContent=current; turnEl.className=current.toLowerCase();
+  render();
+}
+function render(){
+  boardEl.innerHTML='';
+  board.forEach((v,i)=>{
+    const c=document.createElement('div');
+    c.className='cell'+(v?' '+v.toLowerCase():'');
+    c.textContent=v||'';
+    c.addEventListener('click', ()=>move(i));
+    boardEl.appendChild(c);
+  });
+}
+function move(i){
+  if(over || board[i]) return;
+  board[i]=current;
+  const win=checkWin();
+  if(win){
+    over=true; render();
+    win.forEach(idx=> boardEl.children[idx].classList.add('win'));
+    msgEl.textContent = `🎉 ${current} जिंकला!`;
+    return;
+  }
+  if(board.every(v=>v)){ over=true; render(); msgEl.textContent='बरोबरी झाली!'; return; }
+  current = current==='X' ? 'O' : 'X';
+  turnEl.textContent=current; turnEl.className=current.toLowerCase();
+  render();
+}
+function checkWin(){
+  for(const line of WINS){
+    const [a,b,c]=line;
+    if(board[a] && board[a]===board[b] && board[b]===board[c]) return line;
+  }
+  return null;
+}
+document.getElementById('newBtn').addEventListener('click', init);
+init();
+</script>
+</body>
+</html>
