@@ -1,0 +1,203 @@
+/* ============================================================
+   GAMEHUB — DESIGN SYSTEM
+   Palette:  --void #0A0A0F   --surface #14141F   --surface-2 #1B1B2A
+             --volt #C6FF3D (signal/primary)   --violet #7A5CFF (secondary)
+             --hot #FF3D6E   --text #F3F3F7   --muted #92929F
+   Type:     Display  "Unbounded"   Body "Manrope"   Data "JetBrains Mono"
+   Signature: cartridge cards — clipped top-right corner (chip notch)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root{
+  --void:#0A0A0F;
+  --surface:#14141F;
+  --surface-2:#1B1B2A;
+  --surface-3:#242437;
+  --volt:#C6FF3D;
+  --volt-dim:#9CCB2A;
+  --violet:#7A5CFF;
+  --violet-dim:#5A3FD9;
+  --hot:#FF3D6E;
+  --text:#F3F3F7;
+  --muted:#92929F;
+  --border:#26263A;
+  --notch:14px;
+  --radius:10px;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--void);
+  color:var(--text);
+  font-family:'Manrope', sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:64px; /* bottom nav clearance */
+  overflow-x:hidden;
+}
+a{color:inherit; text-decoration:none;}
+button{font-family:inherit; cursor:pointer; border:none;}
+img{max-width:100%; display:block;}
+:focus-visible{outline:2px solid var(--volt); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+
+.display{font-family:'Unbounded', sans-serif;}
+.mono{font-family:'JetBrains Mono', monospace;}
+
+/* ---------- background texture: faint circuit grid ---------- */
+.grid-bg{
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(122,92,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,92,255,0.06) 1px, transparent 1px);
+  background-size:38px 38px;
+  mask-image:radial-gradient(circle at 50% 0%, black, transparent 75%);
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 18px 10px;
+}
+.logo{
+  font-family:'Unbounded'; font-weight:900; font-size:20px; letter-spacing:-0.5px;
+  display:flex; align-items:center; gap:2px;
+}
+.logo .dot{color:var(--volt);}
+.topbar-icons{display:flex; gap:14px; align-items:center;}
+.icon-btn{
+  width:38px; height:38px; border-radius:50%;
+  background:var(--surface); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text); font-size:16px;
+}
+
+/* ---------- hero ---------- */
+.hero{
+  position:relative; margin:8px 14px 22px; border-radius:18px;
+  overflow:hidden; min-height:340px;
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding:20px;
+  background:
+    linear-gradient(180deg, rgba(10,10,15,0.15) 0%, rgba(10,10,15,0.92) 88%),
+    linear-gradient(135deg, #241A46 0%, #12101c 60%);
+}
+.hero-badge{
+  position:absolute; top:16px; left:16px;
+  background:var(--volt); color:var(--void);
+  font-family:'Unbounded'; font-weight:700; font-size:10px;
+  padding:5px 10px; letter-spacing:1px;
+  clip-path:polygon(0 0,100% 0,100% 70%,90% 100%,0 100%);
+}
+.hero-eyebrow{color:var(--volt); font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;}
+.hero-title{font-family:'Unbounded'; font-weight:800; font-size:30px; line-height:1.08; margin-bottom:8px;}
+.hero-desc{color:var(--muted); font-size:13.5px; margin-bottom:16px; max-width:34ch;}
+.hero-actions{display:flex; gap:10px;}
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px 20px; border-radius:8px; font-weight:700; font-size:14px;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{
+  background:var(--volt); color:var(--void);
+  box-shadow:0 0 0 0 rgba(198,255,61,0); 
+}
+.btn-primary:hover{box-shadow:0 4px 22px -4px rgba(198,255,61,0.55);}
+.btn-ghost{
+  background:rgba(255,255,255,0.06); color:var(--text);
+  border:1px solid rgba(255,255,255,0.14); backdrop-filter:blur(6px);
+}
+
+/* ---------- section headers ---------- */
+.section{margin:26px 0;}
+.section-head{
+  display:flex; align-items:baseline; justify-content:space-between;
+  padding:0 16px; margin-bottom:12px;
+}
+.section-title{font-family:'Unbounded'; font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px;}
+.section-more{font-size:12px; color:var(--muted); font-weight:600;}
+
+.rail{
+  display:flex; gap:12px; overflow-x:auto; padding:0 16px 4px;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+.rail::-webkit-scrollbar{display:none;}
+
+.chip-row{display:flex; gap:8px; overflow-x:auto; padding:0 16px 4px; scrollbar-width:none;}
+.chip-row::-webkit-scrollbar{display:none;}
+.chip{
+  flex:none; padding:8px 14px; border-radius:20px; font-size:12.5px; font-weight:600;
+  background:var(--surface); border:1px solid var(--border); color:var(--muted);
+  white-space:nowrap;
+}
+.chip.active{background:var(--volt); color:var(--void); border-color:var(--volt);}
+
+/* ---------- cartridge card (signature element) ---------- */
+.card{
+  flex:none; width:160px; scroll-snap-align:start;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius);
+  clip-path:polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%);
+  overflow:hidden; position:relative;
+  transition:transform .18s ease, border-color .18s ease;
+}
+.card:active{transform:scale(0.96);}
+.card-art{
+  height:110px; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  font-size:34px;
+}
+.card-badge{
+  position:absolute; top:8px; left:0;
+  font-family:'Unbounded'; font-size:9px; font-weight:700; letter-spacing:0.5px;
+  padding:3px 8px 3px 6px; color:var(--void);
+  clip-path:polygon(0 0,100% 0,88% 100%,0% 100%);
+}
+.badge-hot{background:var(--hot); color:#fff;}
+.badge-new{background:var(--volt);}
+.badge-top{background:var(--violet); color:#fff;}
+.badge-original{background:#fff;}
+.card-body{padding:10px 11px 12px;}
+.card-name{font-size:13px; font-weight:700; margin-bottom:4px; line-height:1.25;}
+.card-meta{display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--muted);}
+.card-meta .stars{color:var(--volt);}
+
+/* grid variant for category/listing pages */
+.grid-cards{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:12px; padding:0 16px;
+}
+.grid-cards .card{width:auto;}
+
+/* ---------- bottom nav ---------- */
+.bottom-nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:50;
+  background:rgba(20,20,31,0.92); backdrop-filter:blur(14px);
+  border-top:1px solid var(--border);
+  display:flex; justify-content:space-around; padding:8px 0 max(8px, env(safe-area-inset-bottom));
+}
+.nav-item{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  font-size:10.5px; color:var(--muted); font-weight:600; min-width:56px;
+}
+.nav-item svg{width:22px; height:22px;}
+.nav-item.active{color:var(--volt);}
+
+/* ---------- misc ---------- */
+.container{max-width:520px; margin:0 auto;}
+.divider{height:1px; background:var(--border); margin:8px 16px;}
+
+.empty-state{
+  text-align:center; padding:40px 20px; color:var(--muted);
+}
+.empty-state .display{font-size:16px; color:var(--text); margin-bottom:6px;}
+
+@media (min-width:640px){
+  .container{max-width:900px;}
+  .grid-cards{grid-template-columns:repeat(4,1fr);}
+}

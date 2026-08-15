@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Color Collapse — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#0a1420;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#132840,#0a1420 70%);}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+
+  .progresswrap{padding:0 16px 8px;}
+  .progressbar{height:10px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .progressfill{height:100%;background:linear-gradient(90deg,var(--volt),#7dfa7d);width:0%;transition:width .25s;}
+  .progresslabel{font-size:11px;color:#9494A6;margin-top:4px;text-align:center;}
+
+  #board{ flex:1; display:grid; gap:5px; padding:8px 12px; align-content:center; }
+  .cell{
+    position:relative; border-radius:8px; aspect-ratio:1/1;
+    transition:transform .1s ease, opacity .15s ease;
+    display:flex;align-items:center;justify-content:center; font-size:14px;
+  }
+  .cell.pop{ animation:popOut .18s ease forwards; }
+  @keyframes popOut{ to{ transform:scale(0); opacity:0; } }
+  .cell.fall{ animation:fallIn .2s ease; }
+  @keyframes fallIn{ from{ transform:translateY(-30px); opacity:0.4; } to{ transform:translateY(0); opacity:1; } }
+  .cell.dim{ filter:brightness(0.55); }
+  .cell.bomb::after{ content:'💥'; font-size:15px; }
+
+  .bottom{padding:12px 16px 20px; text-align:center;}
+  .movesrow{font-size:12px;color:#9494A6;margin-bottom:10px;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+
+  .overlay{position:absolute;inset:0;background:rgba(6,10,16,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:270px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+  .combo-toast{position:absolute;top:100px;left:50%;transform:translate(-50%,0);background:rgba(198,255,61,0.92);color:#0A0A0F;font-weight:900;padding:8px 18px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .25s, top .25s;pointer-events:none;z-index:6;}
+  .combo-toast.show{opacity:1;top:110px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=color-collapse">←</a>
+    <div class="pill">🟣 Level <b id="lvlLabel">1</b></div>
+    <div class="pill">⭐ <b id="scoreLabel">0</b></div>
+    <button class="icon-btn" id="pauseBtn">⏸</button>
+  </div>
+  <div class="progresswrap">
+    <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+    <div class="progresslabel"><span id="scoreNow">0</span> / <span id="scoreTarget">300</span></div>
+  </div>
+
+  <div id="board"></div>
+  <div class="combo-toast" id="comboToast"></div>
+
+  <div class="bottom">
+    <div class="movesrow">Moves left: <b id="movesLabel" style="color:#fff;">18</b></div>
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="restartBtn">⟲ Restart</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">COLOR COLLAPSE</div>
+    <div class="sub">Tap a group of 2+ matching colors to pop them. Bigger groups score more and can spawn bombs. Hit the target score before your moves run out.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" style="min-width:200px;margin-bottom:10px;" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" style="min-width:200px;" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">CLEARED!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Level <span id="wonLvl">1</span> complete. +<span id="wonCoins">0</span> coins</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Level</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=color-collapse">🎮 Back to GameHub</a>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">OUT OF MOVES</div>
+    <div class="sub">You didn't reach the target score this time.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="retryBtn">⟲ Try Again</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=color-collapse">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   COLOR COLLAPSE — flood-fill color pop puzzle
+   ============================================================ */
+const COLORS = ['#FF3D6E','#C6FF3D','#7A5CFF','#3DD9FF','#FFB13D'];
+let level = parseInt(localStorage.getItem('cc_level')||'1');
+let coins = parseInt(localStorage.getItem('cc_coins')||'0');
+let GRID = 6, board = [], moves = 0, movesMax = 0, score = 0, target = 0, gameActive = false, combo = 0;
+
+const boardEl = document.getElementById('board');
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function levelConfig(lvl){
+  GRID = lvl < 4 ? 6 : 7;
+  movesMax = 16 + Math.floor(lvl/2);
+  target = 250 + lvl*120;
+}
+
+function initBoard(){
+  levelConfig(level);
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('coinLabel') && (document.getElementById('coinLabel').textContent = coins);
+  moves = movesMax; score = 0; combo = 0;
+  document.getElementById('movesLabel').textContent = moves;
+  document.getElementById('scoreLabel').textContent = score;
+  document.getElementById('scoreNow').textContent = score;
+  document.getElementById('scoreTarget').textContent = target;
+  document.getElementById('progressFill').style.width = '0%';
+
+  const numColors = lvl < 3 ? 4 : 5;
+  board = [];
+  for(let i=0;i<GRID*GRID;i++) board.push({ color: Math.floor(Math.random()*numColors), bomb:false });
+  renderBoard();
+}
+
+function idx(r,c){ return r*GRID+c; }
+
+function getGroup(startIdx){
+  const color = board[startIdx].color;
+  if(color === null) return [];
+  const visited = new Set([startIdx]);
+  const stack = [startIdx];
+  const group = [];
+  while(stack.length){
+    const cur = stack.pop();
+    group.push(cur);
+    const r = Math.floor(cur/GRID), c = cur%GRID;
+    [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc]) => {
+      if(nr>=0 && nr<GRID && nc>=0 && nc<GRID){
+        const ni = idx(nr,nc);
+        if(!visited.has(ni) && board[ni].color === color){
+          visited.add(ni); stack.push(ni);
+        }
+      }
+    });
+  }
+  return group;
+}
+
+function renderBoard(){
+  boardEl.style.gridTemplateColumns = `repeat(${GRID}, 1fr)`;
+  boardEl.innerHTML = '';
+  board.forEach((cell, i) => {
+    const el = document.createElement('div');
+    el.className = 'cell' + (cell.bomb ? ' bomb' : '');
+    el.style.background = COLORS[cell.color];
+    el.addEventListener('click', () => handleTap(i));
+    boardEl.appendChild(el);
+  });
+}
+
+function handleTap(i){
+  if(!gameActive) return;
+  const cell = board[i];
+  if(cell.bomb){
+    // bomb clears row+col
+    const r = Math.floor(i/GRID), c = i%GRID;
+    const cleared = [];
+    for(let x=0;x<GRID;x++){ cleared.push(idx(r,x)); cleared.push(idx(x,c)); }
+    resolvePop([...new Set(cleared)], true);
+    return;
+  }
+  const group = getGroup(i);
+  if(group.length < 2){ beep(200,0.05,'sine',0.02); return; }
+  resolvePop(group, false);
+}
+
+function resolvePop(group, isBomb){
+  const gained = isBomb ? group.length*15 : Math.round(group.length*10 * (1 + group.length*0.08));
+  score += gained;
+  combo++;
+  if(combo >= 2) showCombo(combo);
+  beep(400 + group.length*20, 0.1, 'triangle');
+
+  // mark as popped visually, then collapse
+  group.forEach(i => board[i].color = null);
+  const makeBomb = !isBomb && group.length >= 6;
+  if(makeBomb){
+    board[group[0]] = { color: Math.floor(Math.random()*4), bomb:true };
+  }
+  collapseColumns();
+  useMove();
+  updateScoreUI();
+  renderBoard();
+  checkWin();
+}
+
+function collapseColumns(){
+  for(let c=0;c<GRID;c++){
+    let stack = [];
+    for(let r=GRID-1;r>=0;r--){
+      const cell = board[idx(r,c)];
+      if(cell && cell.color !== null) stack.push(cell);
+    }
+    const numColors = level < 3 ? 4 : 5;
+    for(let r=GRID-1;r>=0;r--){
+      if(stack.length){
+        board[idx(r,c)] = stack.shift();
+      } else {
+        board[idx(r,c)] = { color: Math.floor(Math.random()*numColors), bomb:false };
+      }
+    }
+  }
+}
+
+function showCombo(n){
+  const t = document.getElementById('comboToast');
+  t.textContent = `${n}x COMBO!`;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 700);
+}
+
+function updateScoreUI(){
+  document.getElementById('scoreLabel').textContent = score;
+  document.getElementById('scoreNow').textContent = score;
+  document.getElementById('progressFill').style.width = Math.min(100, score/target*100)+'%';
+}
+
+function useMove(){
+  moves--;
+  document.getElementById('movesLabel').textContent = moves;
+  combo = Math.max(0, combo);
+  if(moves <= 0 && score < target && gameActive){
+    setTimeout(()=>{ if(gameActive){ gameActive=false; beep(120,0.4,'sawtooth'); show('overScreen'); } }, 200);
+  }
+}
+
+function checkWin(){
+  if(score >= target && gameActive){
+    gameActive = false;
+    const earnedCoins = 12 + moves*2 + level*3;
+    coins += earnedCoins;
+    localStorage.setItem('cc_coins', coins);
+    const starCount = moves > movesMax*0.5 ? 3 : moves > movesMax*0.2 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    document.getElementById('wonCoins').textContent = earnedCoins;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); initBoard(); gameActive=true; };
+document.getElementById('pauseBtn').onclick = () => { if(gameActive){ gameActive=false; show('pauseScreen'); } };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); gameActive=true; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); initBoard(); gameActive=true; };
+document.getElementById('restartBtn').onclick = () => { initBoard(); gameActive=true; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initBoard(); gameActive=true; };
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('cc_level', level); initBoard(); gameActive=true;
+};
+</script>
+</body>
+</html>

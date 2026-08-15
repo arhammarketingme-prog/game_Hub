@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>All Games — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header class="topbar">
+  <div class="logo display">Games</div>
+  <div class="topbar-icons">
+    <a class="icon-btn" href="search.html" aria-label="Search">🔍</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="chip-row" id="cat-chips"></div>
+  <section class="section">
+    <div id="grid-all"></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav"></nav>
+
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("games");
+
+  const chipsEl = document.getElementById("cat-chips");
+  let activeCat = getQueryParam("cat") || "all";
+
+  function draw(){
+    chipsEl.innerHTML = GAMEHUB_CATEGORIES.map(c =>
+      `<div class="chip ${c.id===activeCat?'active':''}" data-cat="${c.id}">${c.label}</div>`
+    ).join("");
+    const filtered = activeCat === "all" ? GAMEHUB_CATALOG : GAMEHUB_CATALOG.filter(g => g.category === activeCat);
+    renderGrid("grid-all", filtered);
+
+    chipsEl.querySelectorAll(".chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        activeCat = chip.dataset.cat;
+        draw();
+      });
+    });
+  }
+  draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Developer Dashboard — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .stats-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:0 16px; margin-bottom:18px; }
+  .stat-card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .stat-card b{ display:block; font-size:20px; font-family:'JetBrains Mono'; }
+  .stat-card span{ font-size:11px; color:var(--muted); }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td{ text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); }
+  th{ color:var(--muted); font-weight:600; font-size:11px; }
+  .status-pill{ font-size:10px; padding:3px 8px; border-radius:10px; background:var(--volt); color:#0A0A0F; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="topbar">
+  <a class="icon-btn" href="profile.html">←</a>
+  <div class="logo display" style="font-size:15px;">Developer Dashboard</div>
+  <span></span>
+</header>
+<main class="container">
+  <div class="stats-grid">
+    <div class="stat-card"><b>—</b><span>Total games</span></div>
+    <div class="stat-card"><b>—</b><span>Total plays</span></div>
+    <div class="stat-card"><b>—</b><span>Unique players</span></div>
+    <div class="stat-card"><b>Pending</b><span>Ad revenue</span></div>
+  </div>
+  <div style="padding:0 16px 8px; color:var(--muted); font-size:12px;">Advertising integration pending — revenue figures will populate once a real ad network is connected. No estimated numbers are shown to avoid misleading developers.</div>
+  <div style="padding:0 16px; overflow-x:auto;">
+    <table>
+      <thead><tr><th>Game</th><th>Status</th><th>Plays</th><th>Rating</th><th>Revenue</th></tr></thead>
+      <tbody id="devGamesBody"></tbody>
+    </table>
+  </div>
+</main>
+<nav class="bottom-nav" id="bottom-nav"></nav>
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("profile");
+  document.getElementById('devGamesBody').innerHTML = `
+    <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px 0;">
+      No games submitted yet. <a href="developer.html" style="color:var(--volt);">Submit your first game →</a>
+    </td></tr>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Developer — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .steps{ display:flex; gap:8px; padding:16px; }
+  .step{ flex:1; height:4px; border-radius:3px; background:var(--surface-2); }
+  .step.done{ background:var(--volt); }
+  .card-panel{ margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+  .field input, .field textarea, .field select{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    padding:11px 12px; color:var(--text); font-size:13.5px; font-family:inherit;
+  }
+  .pipeline{ display:flex; justify-content:space-between; padding:0 16px; margin-bottom:18px; font-size:10.5px; color:var(--muted); text-align:center; }
+  .pipeline b{ display:block; color:var(--text); font-size:16px; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="topbar">
+  <a class="icon-btn" href="profile.html">←</a>
+  <div class="logo display" style="font-size:15px;">Developer Portal</div>
+  <span></span>
+</header>
+
+<main class="container">
+  <div class="card-panel" style="text-align:center;">
+    <div class="display" style="font-size:17px;margin-bottom:6px;">Publish your game on GameHub</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:14px;">Register → Create profile → Submit game → Review → Published. We only store your metadata — your game stays hosted on your own server.</div>
+    <button class="btn btn-primary" id="registerBtn">Register as Developer</button>
+  </div>
+
+  <div class="pipeline">
+    <div><b>1</b>Register</div>
+    <div><b>2</b>Profile</div>
+    <div><b>3</b>Submit Game</div>
+    <div><b>4</b>Review</div>
+    <div><b>5</b>Published</div>
+  </div>
+
+  <form class="card-panel" id="submitForm">
+    <div class="display" style="font-size:14px;margin-bottom:14px;">Submit a Game</div>
+    <div class="field"><label>Game Name</label><input required placeholder="e.g. Shadow Dash"></div>
+    <div class="field"><label>Description</label><textarea rows="3" required placeholder="What makes it fun?"></textarea></div>
+    <div class="field"><label>Category</label>
+      <select id="catSelect"></select>
+    </div>
+    <div class="field"><label>Game URL (hosted on your server)</label><input required type="url" placeholder="https://yourdomain.com/game/"></div>
+    <div class="field"><label>Thumbnail URL</label><input type="url" placeholder="https://..."></div>
+    <div class="field"><label>Tags (comma separated)</label><input placeholder="arcade, reflex, casual"></div>
+    <div class="field"><label>Version</label><input placeholder="1.0.0"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%;">Submit for Review</button>
+  </form>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav"></nav>
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("profile");
+  const sel = document.getElementById('catSelect');
+  sel.innerHTML = GAMEHUB_CATEGORIES.filter(c=>c.id!=='all').map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+
+  document.getElementById('registerBtn').addEventListener('click', () => {
+    alert('This creates a `developers` row tied to your Supabase auth account. Wire up once auth screens are live — see supabase_schema.sql.');
+  });
+  document.getElementById('submitForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    alert('Submission received (demo). In production this inserts a row into `games` with status = "submitted", then routes to admin review.');
+  });
+</script>
+</body>
+</html>

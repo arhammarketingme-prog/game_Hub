@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Neon Survivor — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --void:#0A0A0F; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#05050a;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:radial-gradient(circle at 50% 40%,#170f2b,#05050a 75%);}
+
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .hud-left{display:flex;flex-direction:column;gap:6px;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .hp-bar{width:130px;height:10px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);}
+  .hp-fill{height:100%;background:linear-gradient(90deg,var(--hot),#ff8a5c);width:100%;transition:width .2s;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;}
+
+  .stick-zone{position:absolute;left:0;bottom:0;width:45%;height:45%;z-index:4;}
+  .stick-base{position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(198,255,61,0.35);display:none;}
+  .stick-knob{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(198,255,61,0.55);top:28px;left:28px;}
+
+  .overlay{position:absolute;inset:0;background:rgba(5,5,10,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:30px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:26px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--volt);}
+  .stat span{font-size:11px;color:#9494A6;}
+
+  .toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(122,92,255,0.9);color:#fff;padding:8px 18px;border-radius:20px;font-weight:700;font-size:13px;z-index:6;opacity:0;transition:opacity .3s, top .3s;}
+  .toast.show{opacity:1;top:80px;}
+
+  .upgrade-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:14px;margin-bottom:10px;width:260px;text-align:left;}
+  .upgrade-card b{color:var(--volt);display:block;font-size:14px;margin-bottom:2px;}
+  .upgrade-card span{font-size:12px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="hud-left">
+      <div class="pill">❤️ <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div></div>
+      <div class="pill">⏱ <b id="timeLabel">00:00</b></div>
+      <div class="pill">✨ Lv <b id="lvlLabel">1</b></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="soundBtn">🔊</button>
+      <button class="icon-btn" id="pauseBtn">⏸</button>
+      <a class="icon-btn" href="../../game.html?id=neon-survivor" style="text-decoration:none;">✕</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="stick-zone" id="stickZone">
+    <div class="stick-base" id="stickBase"><div class="stick-knob" id="stickKnob"></div></div>
+  </div>
+
+  <!-- START -->
+  <div class="overlay" id="startScreen">
+    <div class="title">NEON SURVIVOR</div>
+    <div class="sub">Drag on the left side to move. Survive the waves. Level up to choose upgrades.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+    <button class="btn btn-ghost" id="howBtn">How to Play</button>
+  </div>
+
+  <!-- PAUSE -->
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:24px;">PAUSED</div>
+    <button class="btn btn-primary" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <!-- LEVEL UP -->
+  <div class="overlay hidden" id="levelScreen">
+    <div class="title" style="font-size:20px;">LEVEL UP!</div>
+    <div class="sub" style="margin-bottom:16px;">Choose your upgrade</div>
+    <div id="upgradeChoices"></div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="font-size:26px;color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">RUN OVER</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalTime">00:00</b><span>SURVIVED</span></div>
+      <div class="stat"><b id="finalCoins">0</b><span>COINS</span></div>
+      <div class="stat"><b id="finalLvl">1</b><span>LEVEL</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Play Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=neon-survivor" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   NEON SURVIVOR — top-down wave survival
+   Original mechanics/art — canvas 2D, no external assets.
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+// ---------- audio (synth, no external files) ----------
+let audioCtx = null, soundOn = true;
+function beep(freq, dur, type='square', vol=0.05){
+  if(!soundOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.stop(audioCtx.currentTime + dur);
+  }catch(e){}
+}
+document.getElementById('soundBtn').onclick = (e) => {
+  soundOn = !soundOn;
+  e.target.textContent = soundOn ? '🔊' : '🔇';
+};
+
+// ---------- state ----------
+let state = 'menu'; // menu | playing | paused | levelup | over
+let player, enemies, bullets, particles, xpOrbs, coinOrbs;
+let elapsed = 0, lastSpawn = 0, spawnInterval = 1600, lastTick = 0;
+let coins = 0, level = 1, xp = 0, xpNeeded = 10;
+let bestTime = parseFloat(localStorage.getItem('ns_best')||'0');
+
+function resetGame(){
+  player = {
+    x: canvas.width/2, y: canvas.height/2, r: 16,
+    hp: 100, maxHp: 100, speed: 2.3,
+    fireRate: 480, lastFire: 0, damage: 10, range: 260, multishot: 1
+  };
+  enemies = []; bullets = []; particles = []; xpOrbs = []; coinOrbs = [];
+  elapsed = 0; lastSpawn = 0; spawnInterval = 1600;
+  coins = 0; level = 1; xp = 0; xpNeeded = 10;
+  updateHUD();
+}
+
+// ---------- input: virtual joystick ----------
+const stickZone = document.getElementById('stickZone');
+const stickBase = document.getElementById('stickBase');
+const stickKnob = document.getElementById('stickKnob');
+let stickActive = false, stickVec = {x:0,y:0}, stickOrigin = {x:0,y:0}, stickId = null;
+
+function stickStart(x,y,id){
+  stickActive = true; stickId = id;
+  stickOrigin = {x,y};
+  stickBase.style.display = 'block';
+  stickBase.style.left = (x-50)+'px'; stickBase.style.top = (y-50)+'px';
+  stickKnob.style.left = '28px'; stickKnob.style.top = '28px';
+}
+function stickMove(x,y){
+  if(!stickActive) return;
+  let dx = x - stickOrigin.x, dy = y - stickOrigin.y;
+  const max = 50, dist = Math.hypot(dx,dy);
+  if(dist > max){ dx = dx/dist*max; dy = dy/dist*max; }
+  stickKnob.style.left = (28+dx)+'px'; stickKnob.style.top = (28+dy)+'px';
+  stickVec = { x: dx/max, y: dy/max };
+}
+function stickEnd(){ stickActive = false; stickVec = {x:0,y:0}; stickBase.style.display='none'; stickId=null; }
+
+stickZone.addEventListener('touchstart', e => { const t=e.changedTouches[0]; stickStart(t.clientX,t.clientY,t.identifier); }, {passive:true});
+stickZone.addEventListener('touchmove', e => { for(const t of e.changedTouches){ if(t.identifier===stickId) stickMove(t.clientX,t.clientY); } }, {passive:true});
+stickZone.addEventListener('touchend', e => { for(const t of e.changedTouches){ if(t.identifier===stickId) stickEnd(); } }, {passive:true});
+stickZone.addEventListener('mousedown', e => stickStart(e.clientX,e.clientY,'m'));
+addEventListener('mousemove', e => { if(stickId==='m') stickMove(e.clientX,e.clientY); });
+addEventListener('mouseup', () => { if(stickId==='m') stickEnd(); });
+
+// keyboard fallback (desktop)
+const keys = {};
+addEventListener('keydown', e => keys[e.key.toLowerCase()]=true);
+addEventListener('keyup', e => keys[e.key.toLowerCase()]=false);
+
+// ---------- spawning ----------
+function spawnEnemy(){
+  const edge = Math.floor(Math.random()*4);
+  let x,y;
+  if(edge===0){ x=-30; y=Math.random()*canvas.height; }
+  else if(edge===1){ x=canvas.width+30; y=Math.random()*canvas.height; }
+  else if(edge===2){ x=Math.random()*canvas.width; y=-30; }
+  else { x=Math.random()*canvas.width; y=canvas.height+30; }
+
+  const isTank = elapsed > 25 && Math.random() < 0.18;
+  const isBoss = elapsed > 0 && Math.floor(elapsed) % 45 === 0 && elapsed - lastBossTime > 40;
+  if(isBoss) lastBossTime = elapsed;
+
+  enemies.push({
+    x, y,
+    r: isBoss ? 34 : isTank ? 20 : 12,
+    hp: isBoss ? 220 : isTank ? 45 : 14,
+    maxHp: isBoss ? 220 : isTank ? 45 : 14,
+    speed: isBoss ? 0.9 : isTank ? 0.8 : 1.2 + Math.random()*0.6,
+    dmg: isBoss ? 26 : isTank ? 14 : 8,
+    color: isBoss ? '#FF3D6E' : isTank ? '#7A5CFF' : '#C6FF3D',
+    boss: isBoss
+  });
+}
+let lastBossTime = -999;
+
+// ---------- upgrades ----------
+const UPGRADE_POOL = [
+  { name:'Rapid Fire', desc:'-15% fire cooldown', apply:p=>p.fireRate*=0.85 },
+  { name:'Heavy Rounds', desc:'+35% bullet damage', apply:p=>p.damage*=1.35 },
+  { name:'Multishot', desc:'+1 projectile', apply:p=>p.multishot+=1 },
+  { name:'Extended Range', desc:'+20% attack range', apply:p=>p.range*=1.2 },
+  { name:'Vitality', desc:'+25 max HP & heal', apply:p=>{p.maxHp+=25; p.hp=p.maxHp;} },
+  { name:'Swift Boots', desc:'+12% move speed', apply:p=>p.speed*=1.12 },
+];
+function offerUpgrades(){
+  state = 'levelup';
+  const box = document.getElementById('upgradeChoices');
+  const picks = [...UPGRADE_POOL].sort(()=>Math.random()-0.5).slice(0,3);
+  box.innerHTML = '';
+  picks.forEach(u => {
+    const el = document.createElement('button');
+    el.className = 'upgrade-card';
+    el.innerHTML = `<b>${u.name}</b><span>${u.desc}</span>`;
+    el.onclick = () => { u.apply(player); beep(660,0.12,'triangle'); hide('levelScreen'); state='playing'; };
+    box.appendChild(el);
+  });
+  show('levelScreen');
+}
+
+// ---------- combat ----------
+function fireBullets(now){
+  if(now - player.lastFire < player.fireRate) return;
+  let nearest = null, nd = player.range;
+  enemies.forEach(en => {
+    const d = Math.hypot(en.x-player.x, en.y-player.y);
+    if(d < nd){ nd = d; nearest = en; }
+  });
+  if(!nearest) return;
+  player.lastFire = now;
+  const baseAngle = Math.atan2(nearest.y-player.y, nearest.x-player.x);
+  const spread = 0.28;
+  for(let i=0;i<player.multishot;i++){
+    const off = player.multishot===1 ? 0 : (i/(player.multishot-1)-0.5)*spread;
+    const a = baseAngle+off;
+    bullets.push({ x:player.x, y:player.y, vx:Math.cos(a)*7, vy:Math.sin(a)*7, dmg:player.damage, life:60 });
+  }
+  beep(880,0.05,'square',0.03);
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1200);
+}
+
+// ---------- main loop ----------
+function update(dt, now){
+  if(state !== 'playing') return;
+  elapsed += dt;
+
+  // difficulty ramp
+  spawnInterval = Math.max(380, 1600 - elapsed*10);
+  if(now - lastSpawn > spawnInterval){ lastSpawn = now; spawnEnemy(); }
+
+  // movement
+  let mx = stickVec.x, my = stickVec.y;
+  if(keys['arrowup']||keys['w']) my=-1;
+  if(keys['arrowdown']||keys['s']) my=1;
+  if(keys['arrowleft']||keys['a']) mx=-1;
+  if(keys['arrowright']||keys['d']) mx=1;
+  const mag = Math.hypot(mx,my);
+  if(mag > 0.15){
+    player.x += (mx/Math.max(mag,1))*player.speed*(dt*60);
+    player.y += (my/Math.max(mag,1))*player.speed*(dt*60);
+  }
+  player.x = Math.max(player.r, Math.min(canvas.width-player.r, player.x));
+  player.y = Math.max(player.r, Math.min(canvas.height-player.r, player.y));
+
+  fireBullets(now);
+
+  // bullets
+  bullets.forEach(b => { b.x+=b.vx; b.y+=b.vy; b.life--; });
+  bullets = bullets.filter(b => b.life>0);
+
+  // enemies
+  enemies.forEach(en => {
+    const a = Math.atan2(player.y-en.y, player.x-en.x);
+    en.x += Math.cos(a)*en.speed; en.y += Math.sin(a)*en.speed;
+    const d = Math.hypot(en.x-player.x, en.y-player.y);
+    if(d < en.r+player.r){
+      player.hp -= en.dmg*dt;
+      spawnParticles(player.x,player.y,'#FF3D6E',3);
+    }
+  });
+
+  // bullet-enemy collision
+  bullets.forEach(b => {
+    enemies.forEach(en => {
+      if(b.dead || en.dead) return;
+      if(Math.hypot(b.x-en.x,b.y-en.y) < en.r+3){
+        en.hp -= b.dmg; b.dead = true;
+        spawnParticles(b.x,b.y,en.color,4);
+        if(en.hp <= 0){
+          en.dead = true;
+          coins += en.boss ? 25 : 3;
+          xpOrbs.push({x:en.x,y:en.y,r:6,val: en.boss?8:1});
+          if(en.boss){ toast('BOSS DEFEATED'); beep(220,0.4,'sawtooth',0.08); }
+          beep(140,0.06,'square',0.02);
+        }
+      }
+    });
+  });
+  bullets = bullets.filter(b=>!b.dead);
+  enemies = enemies.filter(en=>!en.dead);
+
+  // xp orbs
+  xpOrbs.forEach(o => {
+    const d = Math.hypot(o.x-player.x,o.y-player.y);
+    if(d < 90){ const a=Math.atan2(player.y-o.y,player.x-o.x); o.x+=Math.cos(a)*4; o.y+=Math.sin(a)*4; }
+    if(d < player.r+8){ o.dead=true; xp+=o.val; }
+  });
+  xpOrbs = xpOrbs.filter(o=>!o.dead);
+  if(xp >= xpNeeded){
+    xp -= xpNeeded; level++; xpNeeded = Math.floor(xpNeeded*1.35);
+    beep(990,0.2,'triangle',0.06);
+    offerUpgrades();
+  }
+
+  // particles
+  particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.life--; });
+  particles = particles.filter(p=>p.life>0);
+
+  if(player.hp <= 0){ gameOver(); }
+  updateHUD();
+}
+
+function spawnParticles(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, sp = 1+Math.random()*2;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:20,color});
+  }
+}
+
+function updateHUD(){
+  document.getElementById('hpFill').style.width = Math.max(0,(player.hp/player.maxHp*100))+'%';
+  const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
+  document.getElementById('timeLabel').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('lvlLabel').textContent = level;
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  xpOrbs.forEach(o => { ctx.fillStyle='#7A5CFF'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,7); ctx.fill(); });
+  particles.forEach(p => { ctx.globalAlpha=p.life/20; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  enemies.forEach(en => {
+    ctx.fillStyle = en.color;
+    ctx.shadowColor = en.color; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,7); ctx.fill();
+    ctx.shadowBlur = 0;
+    if(en.hp < en.maxHp){
+      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2,4);
+      ctx.fillStyle='#FF3D6E'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2*(en.hp/en.maxHp),4);
+    }
+  });
+
+  bullets.forEach(b => {
+    ctx.fillStyle='#C6FF3D'; ctx.shadowColor='#C6FF3D'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(b.x,b.y,3,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+
+  if(player){
+    ctx.fillStyle='#F3F3F7'; ctx.shadowColor='#C6FF3D'; ctx.shadowBlur=16;
+    ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(198,255,61,0.25)'; ctx.beginPath(); ctx.arc(player.x,player.y,player.range,0,7); ctx.stroke();
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick = ts;
+  const dt = Math.min(0.05,(ts-lastTick)/1000);
+  lastTick = ts;
+  update(dt, ts);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---------- screen management ----------
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => {
+  resetGame(); hide('startScreen'); state='playing'; beep(440,0.1);
+};
+document.getElementById('howBtn').onclick = () => {
+  alert('Drag anywhere on the left side of the screen to move. Your character auto-fires at the nearest enemy. Survive, collect XP orbs, and pick upgrades on level up!');
+};
+document.getElementById('pauseBtn').onclick = () => {
+  if(state==='playing'){ state='paused'; show('pauseScreen'); }
+};
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); state='playing'; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function gameOver(){
+  state='over'; beep(110,0.5,'sawtooth',0.08);
+  if(elapsed > bestTime){ bestTime = elapsed; localStorage.setItem('ns_best', bestTime); }
+  const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
+  document.getElementById('finalTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('finalCoins').textContent = coins;
+  document.getElementById('finalLvl').textContent = level;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

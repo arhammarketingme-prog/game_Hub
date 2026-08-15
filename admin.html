@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .tabs{ display:flex; gap:8px; padding:0 16px 14px; overflow-x:auto; }
+  .tab{ padding:8px 14px; border-radius:20px; background:var(--surface); border:1px solid var(--border); font-size:12.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .tab.active{ background:var(--violet); color:#fff; border-color:var(--violet); }
+  .review-row{ display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0 16px 10px; }
+  .review-row .name{ font-weight:700; font-size:13px; }
+  .review-row .meta{ font-size:11px; color:var(--muted); }
+  .actions{ display:flex; gap:6px; }
+  .mini-btn{ font-size:11px; padding:6px 10px; border-radius:6px; font-weight:700; }
+  .mini-approve{ background:var(--volt); color:#0A0A0F; }
+  .mini-reject{ background:var(--hot); color:#fff; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="topbar">
+  <a class="icon-btn" href="profile.html">←</a>
+  <div class="logo display" style="font-size:15px;">Admin</div>
+  <span></span>
+</header>
+<main class="container">
+  <div class="tabs">
+    <div class="tab active">Pending Review</div>
+    <div class="tab">Published</div>
+    <div class="tab">Reports</div>
+    <div class="tab">Categories</div>
+    <div class="tab">Settings</div>
+  </div>
+  <div id="queue">
+    <div class="empty-state">
+      <div class="display">Queue is empty</div>
+      <div>Submitted games appear here for review. Connect Supabase to load live submissions (query <code>games</code> where <code>status = 'submitted'</code>).</div>
+    </div>
+  </div>
+
+  <div class="section" style="padding:0 16px;">
+    <div style="border:1px solid var(--border); border-radius:12px; padding:16px; background:var(--surface);">
+      <div class="display" style="font-size:13px;margin-bottom:10px;">Revenue Share Settings</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px; margin-bottom:8px;">
+        <span style="color:var(--muted);">Developer share</span><b>70%</b>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+        <span style="color:var(--muted);">Platform share</span><b>30%</b>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:10px;">Editable from <code>platform_settings</code> table — build the slider UI once the admin auth screen exists.</div>
+    </div>
+  </div>
+</main>
+<nav class="bottom-nav" id="bottom-nav"></nav>
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>renderBottomNav("profile");</script>
+</body>
+</html>

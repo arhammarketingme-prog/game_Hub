@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profile — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .p-hero{ padding:28px 16px; text-align:center; }
+  .p-avatar{ width:76px; height:76px; border-radius:50%; background:linear-gradient(135deg,var(--violet),var(--volt)); margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .row-list{ padding:0 16px; }
+  .row-item{ display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .row-item span:first-child{ color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="topbar"><div class="logo display">Profile</div></header>
+<main class="container">
+  <div class="p-hero">
+    <div class="p-avatar">👤</div>
+    <div class="display" style="font-size:18px;margin-bottom:2px;">Guest Player</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:16px;">Sign in to save your library and stats</div>
+    <a class="btn btn-primary" href="#" id="signinBtn">Sign In / Register</a>
+  </div>
+  <div class="row-list">
+    <div class="row-item"><span>Games played</span><span>—</span></div>
+    <div class="row-item"><span>Wishlist</span><span>—</span></div>
+    <div class="row-item"><span>Achievements</span><span>—</span></div>
+    <div class="row-item"><a href="developer.html">Become a developer</a><span>→</span></div>
+    <div class="row-item"><a href="admin.html">Admin dashboard</a><span>→</span></div>
+  </div>
+</main>
+<nav class="bottom-nav" id="bottom-nav"></nav>
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("profile");
+  document.getElementById('signinBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    alert('Supabase Auth (email/password + verification + reset) wires in here once the auth screens are built.');
+  });
+</script>
+</body>
+</html>

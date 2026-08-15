@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Library — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="topbar"><div class="logo display">Library</div></header>
+<main class="container">
+  <div class="chip-row">
+    <div class="chip active">All Saved</div>
+    <div class="chip">Recently Played</div>
+  </div>
+  <section class="section"><div id="grid-lib"></div></section>
+</main>
+<nav class="bottom-nav" id="bottom-nav"></nav>
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("library");
+  // Library is per-account once Supabase auth + wishlists table is wired.
+  // Until sign-in ships, show the launch catalog as "recently played" sample.
+  renderGrid("grid-lib", []);
+</script>
+</body>
+</html>

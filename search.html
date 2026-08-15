@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Search — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .search-bar{
+    margin:14px 16px; display:flex; align-items:center; gap:8px;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px;
+  }
+  .search-bar input{
+    flex:1; background:none; border:none; color:var(--text); font-size:14px; outline:none;
+  }
+  .search-bar input::placeholder{color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header class="topbar">
+  <div class="logo display">Search</div>
+</header>
+
+<main class="container">
+  <div class="search-bar">
+    <span>🔍</span>
+    <input id="q" type="text" placeholder="Search games, categories, developers..." autofocus>
+  </div>
+  <section class="section">
+    <div id="grid-results"></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav"></nav>
+
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("search");
+  const input = document.getElementById("q");
+
+  function run(){
+    const q = input.value.trim().toLowerCase();
+    const results = !q ? GAMEHUB_CATALOG : GAMEHUB_CATALOG.filter(g =>
+      g.name.toLowerCase().includes(q) ||
+      g.categoryLabel.toLowerCase().includes(q) ||
+      g.developer.toLowerCase().includes(q)
+    );
+    renderGrid("grid-results", results);
+  }
+  input.addEventListener("input", run);
+  run();
+</script>
+</body>
+</html>

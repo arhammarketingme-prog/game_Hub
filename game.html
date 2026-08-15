@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game — GameHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .g-hero{ height:220px; display:flex; align-items:center; justify-content:center; font-size:64px; position:relative; }
+  .g-info{ padding:18px 16px 0; }
+  .g-title{ font-size:24px; margin-bottom:4px; }
+  .g-devrow{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .g-stats{ display:flex; gap:18px; margin-bottom:18px; }
+  .g-stat{ font-size:12px; color:var(--muted); }
+  .g-stat b{ display:block; color:var(--text); font-size:16px; font-family:'JetBrains Mono'; }
+  .g-actions{ display:flex; gap:10px; padding:0 16px 8px; }
+  .g-actions .btn{ flex:1; }
+  .g-desc{ padding:14px 16px; color:var(--muted); font-size:13.5px; line-height:1.6; }
+  .g-utility{ display:flex; gap:10px; padding:6px 16px 18px; }
+  .util-btn{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header class="topbar">
+  <a class="icon-btn" href="javascript:history.back()" aria-label="Back">←</a>
+  <div class="logo display" style="font-size:14px;">Game Info</div>
+  <a class="icon-btn" href="#" id="share-btn" aria-label="Share">↗</a>
+</header>
+
+<main class="container">
+  <div class="g-hero" id="g-hero"></div>
+  <div class="g-info">
+    <h1 class="g-title display" id="g-title">—</h1>
+    <div class="g-devrow">
+      <span id="g-dev">—</span> · <span id="g-cat">—</span>
+    </div>
+    <div class="g-stats">
+      <div class="g-stat"><b id="g-rating">—</b>Rating</div>
+      <div class="g-stat"><b id="g-plays">—</b>Plays</div>
+      <div class="g-stat"><b id="g-badge">—</b>Status</div>
+    </div>
+  </div>
+
+  <div class="g-actions">
+    <a class="btn btn-primary" id="play-btn" href="#">▶ Play Now</a>
+    <button class="btn btn-ghost" id="wishlist-btn">＋ Library</button>
+  </div>
+
+  <p class="g-desc" id="g-desc">—</p>
+
+  <div class="g-utility">
+    <button class="util-btn" id="report-btn">🚩 Report</button>
+    <a class="util-btn" href="games.html">🎮 More Games</a>
+  </div>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title display">You may also like</div>
+    </div>
+    <div class="rail" id="rail-related"></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav"></nav>
+
+<script src="js/catalog-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  renderBottomNav("games");
+  const id = getQueryParam("id");
+  const game = findGame(id);
+
+  if(!game){
+    document.querySelector("main").innerHTML = `<div class="empty-state">
+      <div class="display">Game not found</div>
+      <div>It may have been removed or the link is wrong.</div>
+      <br><a class="btn btn-primary" href="games.html">Browse Games</a>
+    </div>`;
+  } else {
+    document.getElementById("g-hero").style.background = game.accent;
+    document.getElementById("g-hero").innerHTML = `<span>${game.icon}</span>` +
+      (game.badge ? `<span class="card-badge badge-${game.badge}" style="top:14px;left:0;">${BADGE_LABEL[game.badge]}</span>` : "");
+    document.getElementById("g-title").textContent = game.name;
+    document.getElementById("g-dev").textContent = game.developer;
+    document.getElementById("g-cat").textContent = game.categoryLabel;
+    document.getElementById("g-rating").textContent = "★ " + game.rating;
+    document.getElementById("g-plays").textContent = game.plays;
+    document.getElementById("g-badge").textContent = game.original ? "Original" : "Developer";
+    document.getElementById("g-desc").textContent = game.tagline + " Built fully in-browser — no download required. Works on mobile and desktop.";
+    document.getElementById("play-btn").href = game.path;
+    document.title = game.name + " — GameHub";
+
+    document.getElementById("wishlist-btn").addEventListener("click", (e) => {
+      e.target.textContent = "✓ In Library";
+      e.target.disabled = true;
+    });
+    document.getElementById("share-btn").addEventListener("click", (e) => {
+      e.preventDefault();
+      if(navigator.share){ navigator.share({ title: game.name, url: location.href }); }
+      else { navigator.clipboard.writeText(location.href); alert("Link copied!"); }
+    });
+    document.getElementById("report-btn").addEventListener("click", () => {
+      alert("Thanks — our moderation team will review this game.");
+    });
+
+    const related = GAMEHUB_CATALOG.filter(g => g.category === game.category && g.id !== game.id);
+    renderRail("rail-related", related.length ? related : GAMEHUB_CATALOG.filter(g => g.id !== game.id));
+  }
+</script>
+</body>
+</html>
