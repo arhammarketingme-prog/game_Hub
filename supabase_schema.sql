@@ -303,5 +303,8 @@ insert into games (slug, name, tagline, category_id, is_original, game_url, badg
 values
   ('merge-forge',   'Merge Forge',    'Merge, upgrade, unleash the forge.',      'puzzle', true, 'games/merge-forge/index.html',   'new', 4.7, 38, 2100, 'published', false),
   ('color-collapse','Color Collapse', 'Chain colors before the grid overflows.', 'puzzle', true, 'games/color-collapse/index.html','hot', 4.6, 51, 3400, 'published', false),
-  ('neon-survivor', 'Neon Survivor',  'Outlast the swarm. Upgrade or die.',      'action', true, 'games/neon-survivor/index.html', 'top', 4.8, 64, 5000, 'published', true)
+  ('neon-survivor', 'Neon Survivor',  'Outlast the swarm. Upgrade or die.',      'action', true, 'games/neon-survivor/index.html', 'top', 4.8, 64, 5000, 'published', true),
+  ('shadow-dash',   'Shadow Dash',    'Switch lanes. Dash through danger.',      'action', true, 'games/shadow-dash/index.html',   'new', 4.5, 21, 1200, 'published', false),
+  ('nitro-rush',    'Nitro Rush',     'Dodge traffic. Bank nitro. Go faster.',   'racing', true, 'games/nitro-rush/index.html',    'hot', 4.6, 33, 1800, 'published', false),
+  ('hoop-master',   'Hoop Master',    'Pull back, release, swish. Chain combos.','sports', true, 'games/hoop-master/index.html',   'new', 4.7, 18, 980,  'published', false)
 on conflict (slug) do nothing;

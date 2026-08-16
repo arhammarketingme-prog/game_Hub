@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Hoop Master — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --orange:#FF9838; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#12100a;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#1c1710,#12100a 85%);}
+
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+
+  .progresswrap{position:absolute;top:60px;left:16px;right:16px;z-index:5;}
+  .progressbar{height:10px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .progressfill{height:100%;background:linear-gradient(90deg,var(--orange),var(--volt));width:0%;transition:width .25s;}
+  .progresslabel{font-size:11px;color:#9494A6;margin-top:4px;text-align:center;}
+
+  .combo-toast{position:absolute;top:120px;left:50%;transform:translate(-50%,0);background:rgba(198,255,61,0.92);color:#0A0A0F;font-weight:900;padding:8px 18px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:6;}
+  .combo-toast.show{opacity:1;}
+
+  .overlay{position:absolute;inset:0;background:rgba(8,6,3,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--orange),var(--volt));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="pill">🏀 Level <b id="lvlLabel">1</b></div>
+    <div style="display:flex;gap:8px;">
+      <div class="pill">⏱ <b id="timeLabel">30</b>s</div>
+      <a class="icon-btn" href="../../game.html?id=hoop-master">✕</a>
+    </div>
+  </div>
+  <div class="progresswrap">
+    <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+    <div class="progresslabel"><span id="scoreNow">0</span> / <span id="scoreTarget">5</span> shots made</div>
+  </div>
+  <div class="combo-toast" id="comboToast"></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">HOOP MASTER</div>
+    <div class="sub">Drag back from the ball and release to shoot. Longer pulls arc higher. Chain makes for combo bonus. Hit the target before time runs out!</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">SWISH!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Level <span id="wonLvl">1</span> complete. +<span id="wonCoins">0</span> coins</div>
+    <button class="btn btn-primary" id="nextBtn">▶ Next Level</button>
+    <a class="btn btn-ghost" href="../../game.html?id=hoop-master" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">TIME'S UP</div>
+    <div class="sub">You didn't hit the target this round.</div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Try Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=hoop-master" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   HOOP MASTER — drag-to-shoot basketball with moving hoop
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let level = parseInt(localStorage.getItem('hm_level')||'1');
+let coins = parseInt(localStorage.getItem('hm_coins')||'0');
+let state='menu';
+let ballStart = {x:0,y:0}, ball = {x:0,y:0,vx:0,vy:0,moving:false,r:16}, hoop = {x:-999,y:-999,dir:1}, hoopVX=30, timeLeft=30, made=0, target=5, combo=0;
+let dragging=false, dragStart=null, dragCur=null;
+let lastTick=0;
+const GRAVITY = 1400;
+
+function levelConfig(lvl){
+  target = Math.min(4+Math.floor(lvl/2), 12);
+  timeLeft = Math.max(18, 32-lvl);
+  hoopVX = Math.min(90, 30+lvl*6);
+}
+
+function resetGame(){
+  levelConfig(level);
+  made = 0; combo = 0;
+  ballStart = { x: canvas.width/2, y: canvas.height*0.82 };
+  ball = { x: ballStart.x, y: ballStart.y, vx:0, vy:0, moving:false, r:16 };
+  hoop = { x: canvas.width*0.5, y: canvas.height*0.28, dir:1 };
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('scoreTarget').textContent = target;
+  updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('timeLabel').textContent = Math.ceil(timeLeft);
+  document.getElementById('scoreNow').textContent = made;
+  document.getElementById('progressFill').style.width = Math.min(100, made/target*100)+'%';
+}
+
+function update(dt){
+  if(state!=='playing') return;
+  timeLeft -= dt;
+  if(timeLeft<=0){ state='over'; beep(120,0.4,'sawtooth'); show('overScreen'); return; }
+
+  hoop.x += hoop.dir*hoopVX*dt;
+  const margin = 70;
+  if(hoop.x < margin || hoop.x > canvas.width-margin) hoop.dir *= -1;
+
+  if(ball.moving){
+    ball.vy += GRAVITY*dt;
+    ball.x += ball.vx*dt;
+    ball.y += ball.vy*dt;
+
+    const d = Math.hypot(ball.x-hoop.x, ball.y-hoop.y);
+    if(d < 26 && ball.vy>0){
+      made++; combo++;
+      if(combo>=2) showCombo(combo);
+      beep(700+combo*40, 0.12, 'triangle');
+      resetBall();
+      if(made>=target) winLevel();
+    } else if(ball.y > canvas.height+40 || ball.x<-40 || ball.x>canvas.width+40){
+      combo=0; resetBall();
+    }
+  }
+  updateHUD();
+}
+
+function resetBall(){
+  ball.x=ballStart.x; ball.y=ballStart.y; ball.vx=0; ball.vy=0; ball.moving=false;
+}
+
+function winLevel(){
+  state='win';
+  const earnedCoins = 10 + Math.floor(timeLeft)*2 + level*3;
+  coins += earnedCoins; localStorage.setItem('hm_coins', coins);
+  const starCount = timeLeft > 12 ? 3 : timeLeft > 5 ? 2 : 1;
+  document.getElementById('starsDisplay').innerHTML =
+    Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+  document.getElementById('wonLvl').textContent = level;
+  document.getElementById('wonCoins').textContent = earnedCoins;
+  beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+  show('winScreen');
+}
+
+function showCombo(n){
+  const t = document.getElementById('comboToast');
+  t.textContent = `${n}x COMBO!`; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 700);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  ctx.fillRect(hoop.x-30, hoop.y-40, 60, 34);
+  ctx.strokeStyle='#FF9838'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(hoop.x, hoop.y, 22, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth=1;
+
+  ctx.strokeStyle='rgba(255,255,255,0.3)';
+  for(let i=-2;i<=2;i++){
+    ctx.beginPath(); ctx.moveTo(hoop.x+i*8, hoop.y+16); ctx.lineTo(hoop.x+i*4, hoop.y+36); ctx.stroke();
+  }
+
+  if(dragging && dragStart && dragCur){
+    const dx = dragStart.x-dragCur.x, dy = dragStart.y-dragCur.y;
+    ctx.strokeStyle='rgba(198,255,61,0.5)'; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x+dx*1.4, ball.y+dy*1.4); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle='#FF9838'; ctx.shadowColor='#FF9838'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.moveTo(ball.x-ball.r,ball.y); ctx.lineTo(ball.x+ball.r,ball.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ball.x,ball.y-ball.r); ctx.lineTo(ball.x,ball.y+ball.r); ctx.stroke();
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function getPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX-rect.left, y: t.clientY-rect.top };
+}
+function onDown(e){
+  if(state!=='playing' || ball.moving) return;
+  const p = getPos(e);
+  if(Math.hypot(p.x-ball.x,p.y-ball.y) < 50){ dragging=true; dragStart=p; dragCur=p; }
+}
+function onMove(e){
+  if(!dragging) return;
+  dragCur = getPos(e);
+}
+function onUp(){
+  if(!dragging) return;
+  dragging=false;
+  const dx = dragStart.x-dragCur.x, dy = dragStart.y-dragCur.y;
+  const power = Math.min(1, Math.hypot(dx,dy)/140);
+  if(power > 0.08){
+    ball.vx = dx*4.2; ball.vy = dy*4.2;
+    ball.moving = true;
+    beep(400,0.08,'square',0.03);
+  }
+}
+canvas.addEventListener('touchstart', e=>{e.preventDefault(); onDown(e);}, {passive:false});
+canvas.addEventListener('touchmove', e=>{e.preventDefault(); onMove(e);}, {passive:false});
+canvas.addEventListener('touchend', e=>{e.preventDefault(); onUp();}, {passive:false});
+canvas.addEventListener('mousedown', onDown);
+addEventListener('mousemove', onMove);
+addEventListener('mouseup', onUp);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); resetGame(); state='playing'; };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); state='playing'; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('hm_level', level); resetGame(); state='playing';
+};
+</script>
+</body>
+</html>

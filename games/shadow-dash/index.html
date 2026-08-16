@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Shadow Dash — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#0a0a12;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#171426,#0a0a12 80%);}
+
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+
+  .touch-zones{position:absolute;inset:0;bottom:0;display:flex;z-index:4;}
+  .touch-zones div{flex:1;}
+
+  .overlay{position:absolute;inset:0;background:rgba(5,5,10,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:30px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:26px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--volt);}
+  .stat span{font-size:11px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="pill">📏 <b id="distLabel">0</b>m</div>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="pauseBtn">⏸</button>
+      <a class="icon-btn" href="../../game.html?id=shadow-dash">✕</a>
+    </div>
+  </div>
+
+  <div class="touch-zones" id="touchZones">
+    <div id="zoneLeft"></div>
+    <div id="zoneRight"></div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">SHADOW DASH</div>
+    <div class="sub">Tap left / right to switch lanes. Tap-hold to dash through obstacles. Survive as far as you can — speed increases over time.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:24px;">PAUSED</div>
+    <button class="btn btn-primary" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">CAUGHT!</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalDist">0</b><span>METERS</span></div>
+      <div class="stat"><b id="finalCoins">0</b><span>COINS</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Run Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=shadow-dash" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SHADOW DASH — 3-lane reflex dodge/dash
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null, soundOn=true;
+function beep(freq,dur,type='square',vol=0.05){
+  if(!soundOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+const LANES = 3;
+let state='menu';
+let lane=1, targetLaneX=0, playerX=0, playerY=0;
+let obstacles=[], coins=[], particles=[];
+let dist=0, speed=6, spawnTimer=0, coinCount=0, best=parseInt(localStorage.getItem('sd_best')||'0');
+let dashCooldown=0, dashing=0;
+let lastTick=0;
+
+function laneX(i){
+  const laneWidth = canvas.width/LANES;
+  return laneWidth*i + laneWidth/2;
+}
+
+function resetGame(){
+  lane=1; obstacles=[]; coins=[]; particles=[];
+  dist=0; speed=6; spawnTimer=0; coinCount=0; dashCooldown=0; dashing=0;
+  playerX = laneX(lane); playerY = canvas.height*0.78;
+  updateHUD();
+}
+
+function spawnRow(){
+  const blockLane = Math.floor(Math.random()*LANES);
+  for(let i=0;i<LANES;i++){
+    if(i===blockLane && Math.random()<0.8){
+      obstacles.push({ lane:i, y:-40, r:22 });
+    } else if(Math.random()<0.35){
+      coins.push({ lane:i, y:-40, r:9 });
+    }
+  }
+}
+
+function update(dt){
+  if(state!=='playing') return;
+  dist += speed*dt*3;
+  speed = Math.min(18, 6 + dist/220);
+
+  const targetX = laneX(lane);
+  playerX += (targetX-playerX)*0.25;
+
+  if(dashCooldown>0) dashCooldown -= dt;
+  if(dashing>0) dashing -= dt;
+
+  spawnTimer -= dt;
+  if(spawnTimer<=0){ spawnRow(); spawnTimer = Math.max(0.45, 1.1 - dist/900); }
+
+  obstacles.forEach(o => o.y += speed*60*dt);
+  coins.forEach(c => c.y += speed*60*dt);
+
+  obstacles.forEach(o => {
+    if(!o.dead && o.lane===lane && Math.abs(o.y-playerY) < o.r+18){
+      if(dashing>0){ o.dead=true; spawnParticles(playerX,playerY,'#C6FF3D'); beep(300,0.08,'triangle'); }
+      else { gameOver(); }
+    }
+  });
+  coins.forEach(c => {
+    if(!c.dead && c.lane===lane && Math.abs(c.y-playerY) < c.r+18){
+      c.dead=true; coinCount++; beep(700,0.06,'triangle',0.03);
+    }
+  });
+
+  obstacles = obstacles.filter(o => !o.dead && o.y < canvas.height+50);
+  coins = coins.filter(c => !c.dead && c.y < canvas.height+50);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});
+  particles = particles.filter(p=>p.life>0);
+
+  updateHUD();
+}
+
+function spawnParticles(x,y,color){
+  for(let i=0;i<10;i++){
+    const a=Math.random()*Math.PI*2, sp=1+Math.random()*3;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:20,color});
+  }
+}
+
+function updateHUD(){
+  document.getElementById('distLabel').textContent = Math.floor(dist);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const laneWidth = canvas.width/LANES;
+  ctx.strokeStyle='rgba(255,255,255,0.06)';
+  for(let i=1;i<LANES;i++){ ctx.beginPath(); ctx.moveTo(laneWidth*i,0); ctx.lineTo(laneWidth*i,canvas.height); ctx.stroke(); }
+
+  coins.forEach(c => {
+    ctx.fillStyle='#FFD65C'; ctx.shadowColor='#FFD65C'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(laneX(c.lane), c.y, c.r, 0, 7); ctx.fill(); ctx.shadowBlur=0;
+  });
+  obstacles.forEach(o => {
+    ctx.fillStyle='#FF3D6E'; ctx.shadowColor='#FF3D6E'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(laneX(o.lane), o.y, o.r, 0, 7); ctx.fill(); ctx.shadowBlur=0;
+  });
+  particles.forEach(p => { ctx.globalAlpha=p.life/20; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  if(state==='playing' || state==='paused'){
+    ctx.fillStyle = dashing>0 ? '#C6FF3D' : '#F3F3F7';
+    ctx.shadowColor = dashing>0 ? '#C6FF3D' : '#7A5CFF'; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(playerX, playerY, 18, 0, 7); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt = Math.min(0.05,(ts-lastTick)/1000);
+  lastTick = ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// input
+function moveLeft(){ if(lane>0) lane--; }
+function moveRight(){ if(lane<LANES-1) lane++; }
+function tryDash(){
+  if(dashCooldown<=0){ dashing=0.5; dashCooldown=2.2; beep(500,0.1,'sawtooth'); }
+}
+let pressTimer=null, pressStart=0;
+function zoneDown(side){
+  pressStart = Date.now();
+  pressTimer = setTimeout(()=>{ tryDash(); pressTimer=null; }, 350);
+}
+function zoneUp(side){
+  if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; if(side==='left') moveLeft(); else moveRight(); }
+}
+const zl = document.getElementById('zoneLeft'), zr = document.getElementById('zoneRight');
+zl.addEventListener('touchstart', e=>{e.preventDefault(); zoneDown('left');}, {passive:false});
+zl.addEventListener('touchend', e=>{e.preventDefault(); zoneUp('left');}, {passive:false});
+zr.addEventListener('touchstart', e=>{e.preventDefault(); zoneDown('right');}, {passive:false});
+zr.addEventListener('touchend', e=>{e.preventDefault(); zoneUp('right');}, {passive:false});
+zl.addEventListener('mousedown', ()=>zoneDown('left'));
+zl.addEventListener('mouseup', ()=>zoneUp('left'));
+zr.addEventListener('mousedown', ()=>zoneDown('right'));
+zr.addEventListener('mouseup', ()=>zoneUp('right'));
+addEventListener('keydown', e => {
+  if(e.key==='ArrowLeft') moveLeft();
+  if(e.key==='ArrowRight') moveRight();
+  if(e.key===' ') tryDash();
+});
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { resetGame(); hide('startScreen'); state='playing'; };
+document.getElementById('pauseBtn').onclick = () => { if(state==='playing'){ state='paused'; show('pauseScreen'); } };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); state='playing'; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function gameOver(){
+  if(state!=='playing') return;
+  state='over'; beep(120,0.4,'sawtooth',0.08);
+  const finalDist = Math.floor(dist);
+  if(finalDist > best){ best = finalDist; localStorage.setItem('sd_best', best); }
+  document.getElementById('finalDist').textContent = finalDist;
+  document.getElementById('finalCoins').textContent = coinCount;
+  document.getElementById('finalBest').textContent = best;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

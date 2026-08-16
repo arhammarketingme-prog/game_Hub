@@ -82,6 +82,22 @@
     <div class="rail" id="rail-action"></div>
   </section>
 
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title display">🏎️ Racing</div>
+      <a class="section-more" href="games.html?cat=racing">See all</a>
+    </div>
+    <div class="rail" id="rail-racing"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title display">🏆 Sports</div>
+      <a class="section-more" href="games.html?cat=sports">See all</a>
+    </div>
+    <div class="rail" id="rail-sports"></div>
+  </section>
+
   <section class="section" style="padding:0 16px;">
     <div style="border:1px dashed var(--border); border-radius:12px; padding:18px; text-align:center; color:var(--muted); font-size:12.5px;">
       More original games and developer submissions ship continuously.
@@ -102,6 +118,8 @@
   renderRail("rail-original", GAMEHUB_CATALOG.filter(g => g.original));
   renderRail("rail-puzzle", GAMEHUB_CATALOG.filter(g => g.category === "puzzle"));
   renderRail("rail-action", GAMEHUB_CATALOG.filter(g => g.category === "action"));
+  renderRail("rail-racing", GAMEHUB_CATALOG.filter(g => g.category === "racing"));
+  renderRail("rail-sports", GAMEHUB_CATALOG.filter(g => g.category === "sports"));
 </script>
 </body>
 </html>

@@ -52,6 +52,51 @@ const GAMEHUB_CATALOG = [
     accent: "linear-gradient(135deg,#4a1042,#12081a)",
     path: "games/neon-survivor/index.html",
     original: true
+  },
+  {
+    id: "shadow-dash",
+    name: "Shadow Dash",
+    tagline: "Switch lanes. Dash through danger.",
+    category: "action",
+    categoryLabel: "Action",
+    developer: "GameHub Studio",
+    badge: "new",
+    rating: 4.5,
+    plays: "1.2k",
+    icon: "💨",
+    accent: "linear-gradient(135deg,#241a3d,#0d0a17)",
+    path: "games/shadow-dash/index.html",
+    original: true
+  },
+  {
+    id: "nitro-rush",
+    name: "Nitro Rush",
+    tagline: "Dodge traffic. Bank nitro. Go faster.",
+    category: "racing",
+    categoryLabel: "Racing",
+    developer: "GameHub Studio",
+    badge: "hot",
+    rating: 4.6,
+    plays: "1.8k",
+    icon: "🏎️",
+    accent: "linear-gradient(135deg,#0f2a3d,#0a0e14)",
+    path: "games/nitro-rush/index.html",
+    original: true
+  },
+  {
+    id: "hoop-master",
+    name: "Hoop Master",
+    tagline: "Pull back, release, swish. Chain combos.",
+    category: "sports",
+    categoryLabel: "Sports",
+    developer: "GameHub Studio",
+    badge: "new",
+    rating: 4.7,
+    plays: "980",
+    icon: "🏀",
+    accent: "linear-gradient(135deg,#3d2a10,#12100a)",
+    path: "games/hoop-master/index.html",
+    original: true
   }
 ];
 

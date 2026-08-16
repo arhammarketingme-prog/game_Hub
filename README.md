@@ -16,13 +16,16 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## The 3 launch games
+## The 6 launch games
 
 | Game | Category | Mechanic |
 |---|---|---|
 | **Neon Survivor** | Action | Top-down wave survival, auto-fire, level-up upgrade picks, boss waves |
 | **Merge Forge** | Puzzle | Grid merge puzzle, tiered items, move-limited levels, star rating |
 | **Color Collapse** | Puzzle | Flood-fill color pop, combo scoring, bomb power-up, progressive targets |
+| **Shadow Dash** | Action | Endless 3-lane dodge, tap-hold to dash through obstacles, best-distance score |
+| **Nitro Rush** | Racing | 4-lane arcade racer, nitro meter fed by coins, speed-burst boost, crash on hit |
+| **Hoop Master** | Sports | Drag-to-shoot basketball, moving hoop, combo chaining, timed level targets |
 
 Each game has: start screen, pause, restart, game-over/win screens, mobile touch controls, sound (synthesized — no external audio files needed), score/coins, level progression saved to `localStorage`, and a working exit-to-GameHub link.
 
