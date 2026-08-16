@@ -140,7 +140,7 @@ function initBoard(){
   document.getElementById('scoreTarget').textContent = target;
   document.getElementById('progressFill').style.width = '0%';
 
-  const numColors = lvl < 3 ? 4 : 5;
+  const numColors = level < 3 ? 4 : 5;
   board = [];
   for(let i=0;i<GRID*GRID;i++) board.push({ color: Math.floor(Math.random()*numColors), bomb:false });
   renderBoard();
