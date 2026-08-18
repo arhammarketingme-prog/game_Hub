@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini Empire — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#0d0f0a;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#1c2412,#0d0f0a 70%);}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;gap:6px;flex-wrap:wrap;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:11.5px;font-weight:700;display:flex;gap:5px;align-items:center;}
+  .pill b{color:var(--gold);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+
+  .goalbar{padding:0 16px 8px;font-size:11.5px;color:#9494A6;text-align:center;}
+  .goalbar b{color:#fff;}
+  .progressbar{height:8px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;margin:0 16px 10px;}
+  .progressfill{height:100%;background:linear-gradient(90deg,var(--gold),var(--volt));width:0%;transition:width .3s;}
+
+  #board{ flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:6px 14px; align-content:center; }
+  .plot{
+    position:relative; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    aspect-ratio:1/1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    font-size:22px; transition:transform .12s;
+  }
+  .plot.built{ border-color:rgba(198,255,61,0.3); }
+  .plot:active{ transform:scale(0.94); }
+  .plot .lvl-badge{ position:absolute; top:4px; right:5px; font-size:9px; font-family:monospace; color:var(--volt); font-weight:700; }
+  .plot .cost{ font-size:9px; color:#9494A6; margin-top:2px; }
+  .plot.locked{ opacity:0.35; }
+
+  .bottom{padding:12px 16px 20px; text-align:center;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+
+  .overlay{position:absolute;inset:0;background:rgba(6,8,4,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--gold),var(--volt));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+  .toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(255,214,92,0.92);color:#221a00;padding:8px 18px;border-radius:20px;font-weight:700;font-size:13px;z-index:6;opacity:0;transition:opacity .3s, top .3s;}
+  .toast.show{opacity:1;top:80px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=mini-empire">←</a>
+    <div class="pill">🏰 Lv <b id="lvlLabel">1</b></div>
+    <div class="pill">🌾 <b id="foodLabel">0</b></div>
+    <div class="pill">🪙 <b id="goldLabel">20</b></div>
+    <button class="icon-btn" id="pauseBtn">⏸</button>
+  </div>
+  <div class="goalbar">Reach <b id="goalLabel">🪙 200 gold</b> to expand your empire</div>
+  <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+
+  <div id="board"></div>
+
+  <div class="bottom">
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="restartBtn">⟲ Restart</button>
+      <button class="btn btn-primary" id="collectBtn">💰 Collect All</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">MINI EMPIRE</div>
+    <div class="sub">Tap an empty plot to build. Tap a building to upgrade it. Collect resources over time and hit the gold target to expand to the next territory.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" style="min-width:200px;margin-bottom:10px;" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" style="min-width:200px;" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">TERRITORY UNLOCKED!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Territory <span id="wonLvl">1</span> complete.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Territory</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=mini-empire">🎮 Back to GameHub</a>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   MINI EMPIRE — tap-to-build resource management, idle-ish
+   ============================================================ */
+const BUILDINGS = [
+  { key:'farm', icon:'🌾', name:'Farm', baseCost:8, produces:'food', rate:1.2 },
+  { key:'mine', icon:'⛏️', name:'Mine', baseCost:14, produces:'gold', rate:1.0 },
+  { key:'house', icon:'🏠', name:'House', baseCost:10, produces:'gold', rate:0.6 },
+];
+let level = parseInt(localStorage.getItem('me_level')||'1');
+let GRID = 8, plots = [], gold=20, food=0, target=200, gameActive=false, lastTick=0, tickAccum=0;
+
+const boardEl = document.getElementById('board');
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function levelConfig(lvl){
+  GRID = 8 + Math.min(4, Math.floor(lvl/2))*4;
+  target = 180 + lvl*90;
+}
+
+function initGame(){
+  levelConfig(level);
+  gold = 20; food = 0;
+  plots = Array.from({length:GRID}, () => ({ building:null, lvl:1 }));
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('goalLabel').textContent = '🪙 ' + target + ' gold';
+  document.getElementById('scoreTarget') && (document.getElementById('scoreTarget').textContent = target);
+  updateHUD();
+  renderBoard();
+}
+
+function buildCost(defKey, plotLvl){
+  const def = BUILDINGS.find(b=>b.key===defKey);
+  return Math.round(def.baseCost * Math.pow(1.5, plotLvl-1));
+}
+
+function renderBoard(){
+  const cols = GRID <= 8 ? 4 : GRID <= 12 ? 4 : 5;
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  boardEl.innerHTML = '';
+  plots.forEach((plot, idx) => {
+    const el = document.createElement('div');
+    if(!plot.building){
+      el.className = 'plot';
+      el.innerHTML = `<span>➕</span><span class="cost">Build</span>`;
+    } else {
+      const def = BUILDINGS.find(b=>b.key===plot.building);
+      const cost = buildCost(plot.building, plot.lvl);
+      el.className = 'plot built';
+      el.innerHTML = `<span class="lvl-badge">Lv${plot.lvl}</span><span>${def.icon}</span><span class="cost">↑${cost}</span>`;
+    }
+    el.addEventListener('click', () => handleTap(idx));
+    boardEl.appendChild(el);
+  });
+}
+
+function handleTap(idx){
+  if(!gameActive) return;
+  const plot = plots[idx];
+  if(!plot.building){
+    openBuildMenu(idx);
+  } else {
+    const cost = buildCost(plot.building, plot.lvl);
+    if(gold >= cost){
+      gold -= cost; plot.lvl++;
+      beep(600+plot.lvl*30,0.1,'triangle');
+      updateHUD(); renderBoard();
+    } else {
+      toast('Not enough gold');
+    }
+  }
+}
+
+function openBuildMenu(idx){
+  const affordable = BUILDINGS.filter(b => gold >= b.baseCost);
+  if(!affordable.length){ toast('Not enough gold to build'); return; }
+  const choice = affordable[Math.floor(Math.random()*0)] || affordable[0];
+  // Simple deterministic cycling picker via prompt-free UI: cycle farm->mine->house by tap count
+  const key = pickBuildingCycle();
+  const def = BUILDINGS.find(b=>b.key===key);
+  if(gold < def.baseCost){ toast(`Need ${def.baseCost} gold for ${def.name}`); return; }
+  gold -= def.baseCost;
+  plots[idx] = { building:key, lvl:1 };
+  beep(500,0.1,'triangle');
+  toast(`Built ${def.icon} ${def.name}`);
+  updateHUD(); renderBoard();
+}
+
+let cycleIdx = 0;
+function pickBuildingCycle(){
+  const key = BUILDINGS[cycleIdx % BUILDINGS.length].key;
+  cycleIdx++;
+  return key;
+}
+
+function collectAll(){
+  if(!gameActive) return;
+  let gGain=0, fGain=0;
+  plots.forEach(p => {
+    if(!p.building) return;
+    const def = BUILDINGS.find(b=>b.key===p.building);
+    const amt = Math.round(def.rate * p.lvl * 6);
+    if(def.produces==='gold') gGain += amt; else fGain += amt;
+  });
+  if(gGain===0 && fGain===0){ toast('Build something first!'); return; }
+  gold += gGain; food += fGain;
+  beep(700,0.08,'triangle',0.03);
+  updateHUD();
+  checkWin();
+}
+
+function updateHUD(){
+  document.getElementById('goldLabel').textContent = gold;
+  document.getElementById('foodLabel').textContent = food;
+  document.getElementById('progressFill').style.width = Math.min(100, gold/target*100)+'%';
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1100);
+}
+
+function checkWin(){
+  if(gold >= target && gameActive){
+    gameActive = false;
+    const builtCount = plots.filter(p=>p.building).length;
+    const starCount = builtCount > GRID*0.7 ? 3 : builtCount > GRID*0.4 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+// slow passive tick so idle waiting also progresses a little
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=(ts-lastTick)/1000; lastTick=ts;
+  if(gameActive){
+    tickAccum += dt;
+    if(tickAccum > 6){
+      tickAccum = 0;
+      let gGain=0;
+      plots.forEach(p=>{ if(p.building==='mine'||p.building==='house'){ const def=BUILDINGS.find(b=>b.key===p.building); gGain += Math.round(def.rate*p.lvl*1.5); } });
+      if(gGain>0){ gold += gGain; updateHUD(); checkWin(); }
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); initGame(); gameActive=true; };
+document.getElementById('pauseBtn').onclick = () => { if(gameActive){ gameActive=false; show('pauseScreen'); } };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); gameActive=true; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); initGame(); gameActive=true; };
+document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
+document.getElementById('collectBtn').onclick = collectAll;
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('me_level', level); initGame(); gameActive=true;
+};
+</script>
+</body>
+</html>

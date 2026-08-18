@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sky Defender — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --cyan:#3DD9FF; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#070c14;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#0d1826,#070c14 85%);}
+
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .hud-left{display:flex;flex-direction:column;gap:6px;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .hp-bar{width:110px;height:9px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);}
+  .hp-fill{height:100%;background:linear-gradient(90deg,var(--hot),#ff8a5c);width:100%;transition:width .2s;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+
+  .toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(61,217,255,0.9);color:#05131c;padding:8px 18px;border-radius:20px;font-weight:700;font-size:13px;z-index:6;opacity:0;transition:opacity .3s, top .3s;}
+  .toast.show{opacity:1;top:80px;}
+
+  .overlay{position:absolute;inset:0;background:rgba(5,8,14,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--cyan);}
+  .stat span{font-size:11px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="hud-left">
+      <div class="pill">❤️ <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div></div>
+      <div class="pill">🌊 Wave <b id="waveLabel">1</b></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="pauseBtn">⏸</button>
+      <a class="icon-btn" href="../../game.html?id=sky-defender">✕</a>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">SKY DEFENDER</div>
+    <div class="sub">Drag anywhere to move your ship. It auto-fires upward. Survive enemy formations and take down the wave boss every 5 waves.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" id="restartBtnPause">⟲ Restart</button>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">SHIP DOWN</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalWave">1</b><span>WAVE</span></div>
+      <div class="stat"><b id="finalScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Fly Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=sky-defender" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SKY DEFENDER — vertical shooter, wave-based with boss every 5th wave
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let state='menu';
+let player = { x:0, y:0, r:16, hp:100, maxHp:100, lastFire:0, fireRate:260 };
+let enemies=[], playerBullets=[], enemyBullets=[], particles=[];
+let wave=1, score=0, spawned=0, waveTotal=6, waveCleared=true, waveTimer=0;
+let best = parseInt(localStorage.getItem('sky_best')||'0');
+let lastTick=0;
+let dragging=false;
+
+function resetGame(){
+  player.x = canvas.width/2; player.y = canvas.height*0.82;
+  player.hp = 100; player.maxHp = 100; player.lastFire=0;
+  enemies=[]; playerBullets=[]; enemyBullets=[]; particles=[];
+  wave=1; score=0; waveCleared=true; waveTimer=0.6;
+  updateHUD();
+}
+
+function startWave(){
+  waveTotal = 5 + wave;
+  spawned = 0; waveCleared = false;
+  const isBossWave = wave % 5 === 0;
+  if(isBossWave){
+    enemies.push({ boss:true, x:canvas.width/2, y:-60, r:38, hp:150+wave*20, maxHp:150+wave*20, vx:1.4, lastFire:0, fireRate:900 });
+    waveTotal = 0;
+    toast('⚠ BOSS WAVE');
+  }
+}
+
+function spawnEnemyRow(){
+  if(spawned >= waveTotal) return;
+  const cols = 4;
+  for(let i=0;i<cols;i++){
+    if(spawned>=waveTotal) break;
+    enemies.push({
+      boss:false, x: (canvas.width/(cols+1))*(i+1), y:-30-i*10,
+      r:14, hp: 12+wave*2, maxHp:12+wave*2, vx: (Math.random()<0.5?-1:1)*0.4, lastFire:0, fireRate: 1800-wave*30
+    });
+    spawned++;
+  }
+}
+
+function update(dt){
+  if(state!=='playing') return;
+
+  if(waveCleared){
+    waveTimer -= dt;
+    if(waveTimer<=0){ startWave(); }
+  } else if(enemies.length===0 && spawned>=waveTotal){
+    waveCleared = true; waveTimer = 1.0; wave++;
+    document.getElementById('waveLabel').textContent = wave;
+    score += 25;
+  }
+
+  if(!waveCleared && enemies.filter(e=>!e.boss).length < 3 && spawned < waveTotal){
+    spawnEnemyRow();
+  }
+
+  // player auto-fire
+  const now = performance.now();
+  if(now - player.lastFire > player.fireRate){
+    player.lastFire = now;
+    playerBullets.push({x:player.x, y:player.y-20, vy:-9});
+    beep(880,0.04,'square',0.02);
+  }
+  playerBullets.forEach(b=>b.y+=b.vy);
+  playerBullets = playerBullets.filter(b=>b.y>-20);
+
+  enemies.forEach(en => {
+    if(en.boss){
+      en.y = Math.min(en.y+1.2, 90);
+      en.x += en.vx*1.4;
+      if(en.x<40||en.x>canvas.width-40) en.vx*=-1;
+    } else {
+      en.y += 1.0 + wave*0.05;
+      en.x += en.vx;
+      if(en.x<20||en.x>canvas.width-20) en.vx*=-1;
+    }
+    if(now - en.lastFire > en.fireRate){
+      en.lastFire = now;
+      enemyBullets.push({x:en.x, y:en.y+en.r, vy: en.boss?5:3.5});
+    }
+    if(en.y > canvas.height+50 && !en.boss){ en.dead=true; }
+  });
+
+  enemyBullets.forEach(b=>b.y+=b.vy);
+  enemyBullets = enemyBullets.filter(b=>b.y<canvas.height+30);
+
+  // collisions: player bullets vs enemies
+  playerBullets.forEach(b => {
+    enemies.forEach(en => {
+      if(b.dead||en.dead) return;
+      if(Math.hypot(b.x-en.x,b.y-en.y) < en.r+4){
+        en.hp -= 8; b.dead=true;
+        spawnParticles(b.x,b.y,'#3DD9FF');
+        if(en.hp<=0){
+          en.dead=true; score += en.boss?100:10;
+          if(en.boss){ toast('BOSS DEFEATED'); beep(180,0.4,'sawtooth',0.08); }
+          beep(160,0.05,'square',0.02);
+        }
+      }
+    });
+  });
+  playerBullets = playerBullets.filter(b=>!b.dead);
+  enemies = enemies.filter(en=>!en.dead);
+
+  // enemy bullets vs player
+  enemyBullets.forEach(b => {
+    if(!b.dead && Math.hypot(b.x-player.x,b.y-player.y) < player.r+4){
+      b.dead=true; player.hp -= 8;
+      spawnParticles(player.x,player.y,'#FF3D6E');
+      beep(140,0.06,'square',0.02);
+    }
+  });
+  enemyBullets = enemyBullets.filter(b=>!b.dead);
+
+  enemies.forEach(en => {
+    if(!en.dead && Math.hypot(en.x-player.x,en.y-player.y) < en.r+player.r){
+      en.dead=true; player.hp -= en.boss?40:15;
+      spawnParticles(player.x,player.y,'#FF3D6E');
+    }
+  });
+  enemies = enemies.filter(en=>!en.dead);
+
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});
+  particles = particles.filter(p=>p.life>0);
+
+  if(player.hp<=0){ gameOver(); }
+  updateHUD();
+}
+
+function spawnParticles(x,y,color){
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2, sp=1+Math.random()*2;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:18,color});
+  }
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1200);
+}
+
+function updateHUD(){
+  document.getElementById('hpFill').style.width = Math.max(0,(player.hp/player.maxHp*100))+'%';
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  particles.forEach(p => { ctx.globalAlpha=p.life/18; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  playerBullets.forEach(b => {
+    ctx.fillStyle='#3DD9FF'; ctx.shadowColor='#3DD9FF'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(b.x,b.y,3,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+  enemyBullets.forEach(b => {
+    ctx.fillStyle='#FF3D6E'; ctx.shadowColor='#FF3D6E'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(b.x,b.y,3,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+
+  enemies.forEach(en => {
+    ctx.fillStyle = en.boss ? '#FF3D6E' : '#7A5CFF';
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+    if(en.hp<en.maxHp){
+      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2,4);
+      ctx.fillStyle='#C6FF3D'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2*(en.hp/en.maxHp),4);
+    }
+  });
+
+  if(state==='playing' || state==='paused'){
+    ctx.fillStyle='#F3F3F7'; ctx.shadowColor='#C6FF3D'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.moveTo(player.x,player.y-18); ctx.lineTo(player.x-14,player.y+14); ctx.lineTo(player.x+14,player.y+14); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function getPos(e){
+  const rect=canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x:t.clientX-rect.left, y:t.clientY-rect.top };
+}
+canvas.addEventListener('touchstart', e=>{e.preventDefault(); dragging=true;}, {passive:false});
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(!dragging || state!=='playing') return;
+  const p=getPos(e);
+  player.x = Math.max(player.r, Math.min(canvas.width-player.r, p.x));
+  player.y = Math.max(player.r, Math.min(canvas.height-player.r, p.y));
+}, {passive:false});
+canvas.addEventListener('touchend', ()=>dragging=false);
+canvas.addEventListener('mousedown', ()=>dragging=true);
+addEventListener('mousemove', e=>{
+  if(!dragging || state!=='playing') return;
+  const rect=canvas.getBoundingClientRect();
+  player.x = Math.max(player.r, Math.min(canvas.width-player.r, e.clientX-rect.left));
+  player.y = Math.max(player.r, Math.min(canvas.height-player.r, e.clientY-rect.top));
+});
+addEventListener('mouseup', ()=>dragging=false);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { resetGame(); hide('startScreen'); state='playing'; };
+document.getElementById('pauseBtn').onclick = () => { if(state==='playing'){ state='paused'; show('pauseScreen'); } };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); state='playing'; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function gameOver(){
+  if(state!=='playing') return;
+  state='over'; beep(110,0.4,'sawtooth',0.08);
+  if(score>best){ best=score; localStorage.setItem('sky_best', best); }
+  document.getElementById('finalWave').textContent = wave;
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

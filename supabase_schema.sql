@@ -306,5 +306,7 @@ values
   ('neon-survivor', 'Neon Survivor',  'Outlast the swarm. Upgrade or die.',      'action', true, 'games/neon-survivor/index.html', 'top', 4.8, 64, 5000, 'published', true),
   ('shadow-dash',   'Shadow Dash',    'Switch lanes. Dash through danger.',      'action', true, 'games/shadow-dash/index.html',   'new', 4.5, 21, 1200, 'published', false),
   ('nitro-rush',    'Nitro Rush',     'Dodge traffic. Bank nitro. Go faster.',   'racing', true, 'games/nitro-rush/index.html',    'hot', 4.6, 33, 1800, 'published', false),
-  ('hoop-master',   'Hoop Master',    'Pull back, release, swish. Chain combos.','sports', true, 'games/hoop-master/index.html',   'new', 4.7, 18, 980,  'published', false)
+  ('hoop-master',   'Hoop Master',    'Pull back, release, swish. Chain combos.','sports', true, 'games/hoop-master/index.html',   'new', 4.7, 18, 980,  'published', false),
+  ('sky-defender',  'Sky Defender',   'Vertical shooter. Waves, formations, boss fights.', 'action', true, 'games/sky-defender/index.html', 'new', 4.6, 14, 870, 'published', false),
+  ('mini-empire',   'Mini Empire',    'Build, upgrade, collect. Expand your territory.', 'strategy', true, 'games/mini-empire/index.html', 'new', 4.5, 11, 640, 'published', false)
 on conflict (slug) do nothing;

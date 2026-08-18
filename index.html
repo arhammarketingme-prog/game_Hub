@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0A0A0F">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/ads.css">
 </head>
 <body>
 <div class="grid-bg"></div>
@@ -98,6 +99,18 @@
     <div class="rail" id="rail-sports"></div>
   </section>
 
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title display">🏰 Strategy</div>
+      <a class="section-more" href="games.html?cat=strategy">See all</a>
+    </div>
+    <div class="rail" id="rail-strategy"></div>
+  </section>
+
+  <section class="section" style="padding:0 16px;">
+    <div id="ad-home-banner"></div>
+  </section>
+
   <section class="section" style="padding:0 16px;">
     <div style="border:1px dashed var(--border); border-radius:12px; padding:18px; text-align:center; color:var(--muted); font-size:12.5px;">
       More original games and developer submissions ship continuously.
@@ -111,6 +124,7 @@
 
 <script src="js/catalog-data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/ads.js"></script>
 <script>
   renderBottomNav("home");
   renderRail("rail-trending", GAMEHUB_CATALOG);
@@ -120,6 +134,8 @@
   renderRail("rail-action", GAMEHUB_CATALOG.filter(g => g.category === "action"));
   renderRail("rail-racing", GAMEHUB_CATALOG.filter(g => g.category === "racing"));
   renderRail("rail-sports", GAMEHUB_CATALOG.filter(g => g.category === "sports"));
+  renderRail("rail-strategy", GAMEHUB_CATALOG.filter(g => g.category === "strategy"));
+  AdService.showBanner("ad-home-banner");
 </script>
 </body>
 </html>

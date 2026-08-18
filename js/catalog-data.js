@@ -97,6 +97,36 @@ const GAMEHUB_CATALOG = [
     accent: "linear-gradient(135deg,#3d2a10,#12100a)",
     path: "games/hoop-master/index.html",
     original: true
+  },
+  {
+    id: "sky-defender",
+    name: "Sky Defender",
+    tagline: "Vertical shooter. Waves, formations, boss fights.",
+    category: "action",
+    categoryLabel: "Action",
+    developer: "GameHub Studio",
+    badge: "new",
+    rating: 4.6,
+    plays: "870",
+    icon: "🚀",
+    accent: "linear-gradient(135deg,#0d1826,#070c14)",
+    path: "games/sky-defender/index.html",
+    original: true
+  },
+  {
+    id: "mini-empire",
+    name: "Mini Empire",
+    tagline: "Build, upgrade, collect. Expand your territory.",
+    category: "strategy",
+    categoryLabel: "Strategy",
+    developer: "GameHub Studio",
+    badge: "new",
+    rating: 4.5,
+    plays: "640",
+    icon: "🏰",
+    accent: "linear-gradient(135deg,#1c2412,#0d0f0a)",
+    path: "games/mini-empire/index.html",
+    original: true
   }
 ];
 

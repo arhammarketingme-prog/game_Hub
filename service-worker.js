@@ -9,10 +9,23 @@ const SHELL_FILES = [
   './games.html',
   './search.html',
   './game.html',
+  './categories.html',
+  './library.html',
+  './profile.html',
   './css/style.css',
+  './css/ads.css',
   './js/app.js',
   './js/catalog-data.js',
-  './manifest.json'
+  './js/ads.js',
+  './manifest.json',
+  './games/neon-survivor/index.html',
+  './games/merge-forge/index.html',
+  './games/color-collapse/index.html',
+  './games/shadow-dash/index.html',
+  './games/nitro-rush/index.html',
+  './games/hoop-master/index.html',
+  './games/sky-defender/index.html',
+  './games/mini-empire/index.html'
 ];
 
 self.addEventListener('install', (event) => {

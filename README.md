@@ -16,7 +16,7 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## The 6 launch games
+## The 8 launch games
 
 | Game | Category | Mechanic |
 |---|---|---|
@@ -26,6 +26,18 @@ Forms on developer/admin pages are UI-complete but not yet wired to Supabase wri
 | **Shadow Dash** | Action | Endless 3-lane dodge, tap-hold to dash through obstacles, best-distance score |
 | **Nitro Rush** | Racing | 4-lane arcade racer, nitro meter fed by coins, speed-burst boost, crash on hit |
 | **Hoop Master** | Sports | Drag-to-shoot basketball, moving hoop, combo chaining, timed level targets |
+| **Sky Defender** | Action | Vertical shooter, enemy wave formations, boss every 5th wave |
+| **Mini Empire** | Strategy | Tap-to-build resource grid, upgrades, gold target unlocks next territory |
+
+## Advertising — architecture in place, no fake numbers
+
+`js/ads.js` (`AdService`) renders a clearly labeled placeholder banner (`AdService.showBanner`) and a skippable pre-game interstitial (`AdService.showInterstitial`) — used on the homepage, games listing, and right before a game launches from `game.html`. Both work identically whether the page is opened in a browser tab or from an installed PWA, since it's the same web content either way.
+
+Nothing here invents ad revenue or impressions. Once a real ad network (AdMob, IronSource, etc.) is connected, set `AdService.provider` and replace the two placeholder branches in `js/ads.js` with the real SDK calls — every page that calls `AdService.showBanner()`/`showInterstitial()` picks it up automatically, no per-page changes needed. Impression/click events should log to the `ad_events` table in `supabase_schema.sql`.
+
+## Installing as an app (PWA)
+
+Icons are generated at `assets/icons/`. On Android Chrome, visiting the site shows an "Install app" prompt (or Menu → "Add to Home screen"); on iOS Safari, use Share → "Add to Home Screen". Once installed, `service-worker.js` caches the shell pages **and all 8 game files**, so previously-opened games keep working offline. Ads (once connected) still render normally in the installed app, since it's the same served web content — no separate build needed.
 
 Each game has: start screen, pause, restart, game-over/win screens, mobile touch controls, sound (synthesized — no external audio files needed), score/coins, level progression saved to `localStorage`, and a working exit-to-GameHub link.
 
