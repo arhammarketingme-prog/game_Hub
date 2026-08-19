@@ -16,18 +16,11 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## The 8 launch games
+## 32 games live
 
-| Game | Category | Mechanic |
-|---|---|---|
-| **Neon Survivor** | Action | Top-down wave survival, auto-fire, level-up upgrade picks, boss waves |
-| **Merge Forge** | Puzzle | Grid merge puzzle, tiered items, move-limited levels, star rating |
-| **Color Collapse** | Puzzle | Flood-fill color pop, combo scoring, bomb power-up, progressive targets |
-| **Shadow Dash** | Action | Endless 3-lane dodge, tap-hold to dash through obstacles, best-distance score |
-| **Nitro Rush** | Racing | 4-lane arcade racer, nitro meter fed by coins, speed-burst boost, crash on hit |
-| **Hoop Master** | Sports | Drag-to-shoot basketball, moving hoop, combo chaining, timed level targets |
-| **Sky Defender** | Action | Vertical shooter, enemy wave formations, boss every 5th wave |
-| **Mini Empire** | Strategy | Tap-to-build resource grid, upgrades, gold target unlocks next territory |
+Category spread: **Puzzle 15 · Action 10 · Racing 2 · Strategy 4 · Sports 1**
+
+The original 8 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build — see each game's own file for its specific mechanic. All 32 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
 
 ## Advertising — architecture in place, no fake numbers
 

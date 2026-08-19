@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>Simon Says — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:24px 16px;}
+h1{font-family:'Fraunces',serif; color:#8b5cf6; font-size:24px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:12px; margin-bottom:16px;}
+.level{font-size:16px; color:#e2bc6b; font-weight:700; margin-bottom:16px;}
+.simon-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:min(80vw,260px); aspect-ratio:1;}
+.pad{border-radius:16px; cursor:pointer; opacity:0.5; transition:opacity .1s;}
+.pad.lit{opacity:1; box-shadow:0 0 24px currentColor;}
+.p1{background:#e2725b; color:#e2725b; border-radius:16px 4px 4px 4px;}
+.p2{background:#4ecca3; color:#4ecca3; border-radius:4px 16px 4px 4px;}
+.p3{background:#3b82f6; color:#3b82f6; border-radius:4px 4px 4px 16px;}
+.p4{background:#e2bc6b; color:#e2bc6b; border-radius:4px 4px 16px 4px;}
+.startbtn{margin-top:20px; background:#8b5cf6; color:#fff; border:none; border-radius:10px; padding:11px 22px; font-weight:700; cursor:pointer;}
+.msg{margin-top:12px; font-size:14px; color:#e2725b; min-height:20px;}
+</style></head>
+<body>
+<a href="../../game.html?id=simonsays" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<h1>🎨 Simon Says</h1>
+<div class="sub">Remember the sequence, then repeat it</div>
+<div class="level">Round: <span id="level">0</span></div>
+<div class="simon-grid">
+  <div class="pad p1" data-n="1"></div><div class="pad p2" data-n="2"></div>
+  <div class="pad p3" data-n="3"></div><div class="pad p4" data-n="4"></div>
+</div>
+<button class="startbtn" id="startBtn">Start</button>
+<div class="msg" id="msg"></div>
+<script>
+const pads=[...document.querySelectorAll('.pad')];
+let sequence=[], userStep=0, round=0, accepting=false;
+function lightPad(n,cb){
+  const pad=pads[n-1]; pad.classList.add('lit');
+  setTimeout(()=>{ pad.classList.remove('lit'); if(cb) cb(); }, 400);
+}
+function playSeq(){
+  accepting=false; document.getElementById('msg').textContent='Watch carefully...';
+  let i=0;
+  function step(){ if(i>=sequence.length){ accepting=true; userStep=0; document.getElementById('msg').textContent="Now it's your turn"; return; } lightPad(sequence[i], ()=>{ i++; setTimeout(step,150); }); }
+  setTimeout(step,500);
+}
+function nextRound(){
+  round++; document.getElementById('level').textContent=round;
+  sequence.push(1+Math.floor(Math.random()*4));
+  playSeq();
+}
+pads.forEach(pad=>{
+  pad.addEventListener('click', ()=>{
+    if(!accepting) return;
+    const n=Number(pad.dataset.n); lightPad(n);
+    if(n===sequence[userStep]){
+      userStep++;
+      if(userStep===sequence.length){ accepting=false; setTimeout(nextRound,700); }
+    } else {
+      accepting=false;
+      document.getElementById('msg').textContent=`💥 You slipped! You reached round ${round-1} .`;
+      round=0; sequence=[]; document.getElementById('level').textContent=0;
+    }
+  });
+});
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  round=0; sequence=[]; document.getElementById('msg').textContent=''; nextRound();
+});
+</script>
+</body></html>

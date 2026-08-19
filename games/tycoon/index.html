@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>Coin Tycoon — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@600;700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:20px 16px 60px;}
+h1{font-family:'Fraunces',serif; color:#e2bc6b; font-size:24px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:11.5px; margin-bottom:14px;}
+.total{font-size:34px; font-weight:700; color:#e2bc6b; margin-bottom:4px;}
+.persec{color:#4ecca3; font-size:13px; margin-bottom:16px;}
+.clickbtn{width:140px; height:140px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #e2bc6b, #c9a34e 70%); border:none; font-size:44px; cursor:pointer; box-shadow:0 0 30px rgba(201,163,78,0.35); margin-bottom:20px;}
+.clickbtn:active{transform:scale(0.95);}
+.gens{width:100%; max-width:400px; display:flex; flex-direction:column; gap:8px;}
+.gen{background:#20242f; border:1px solid rgba(201,163,78,0.25); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;}
+.gen:active{transform:scale(0.98);}
+.gen.disabled{opacity:0.4; cursor:not-allowed;}
+.gen .info{text-align:left;}
+.gen .gname{font-size:13px; font-weight:700;}
+.gen .gdetail{font-size:10px; color:#b8b2a4;}
+.gen .gcost{font-size:13px; font-weight:700; color:#e2bc6b;}
+.upgradebtn{margin-top:14px; background:#4ecca3; color:#12141c; border:none; border-radius:10px; padding:10px 18px; font-weight:700; cursor:pointer; font-size:12px;}
+</style></head>
+<body>
+<a href="../../game.html?id=tycoon" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<h1>💰 Coin Tycoon</h1>
+<div class="sub">Earn by clicking, buy generators, grow your empire</div>
+<div class="total" id="total">0</div>
+<div class="persec">Per second: <span id="persec">0</span></div>
+<button class="clickbtn" id="clickBtn">💰</button>
+<button class="upgradebtn" id="upgradeClickBtn">Upgrade Click (₹<span id="upgradeCost">50</span>)</button>
+<div class="gens" id="gens"></div>
+<script>
+let coins=0, perClick=1, perSec=0;
+const GENERATORS=[
+  { key:'lemon', name:'🍋 Lemonade Stand', baseCost:15, income:0.5, owned:0 },
+  { key:'shop', name:'🏪 Small Shop', baseCost:100, income:3, owned:0 },
+  { key:'factory', name:'🏭 Factory', baseCost:800, income:20, owned:0 },
+  { key:'mall', name:'🏬 Mall', baseCost:5000, income:100, owned:0 },
+  { key:'empire', name:'🏰 Empire', baseCost:30000, income:600, owned:0 },
+];
+let clickUpgradeCost=50;
+
+function fmt(n){
+  if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return (n/1e3).toFixed(2)+'K';
+  return Math.floor(n).toString();
+}
+function costFor(gen){ return Math.floor(gen.baseCost * Math.pow(1.15, gen.owned)); }
+function render(){
+  document.getElementById('total').textContent = fmt(coins);
+  document.getElementById('persec').textContent = fmt(perSec);
+  document.getElementById('upgradeCost').textContent = fmt(clickUpgradeCost);
+  const genBox=document.getElementById('gens'); genBox.innerHTML='';
+  GENERATORS.forEach(g=>{
+    const cost=costFor(g);
+    const div=document.createElement('div');
+    div.className='gen'+(coins<cost?' disabled':'');
+    div.innerHTML = `<div class="info"><div class="gname">${g.name} (${g.owned})</div><div class="gdetail">+${g.income}/per second, each</div></div><div class="gcost">₹${fmt(cost)}</div>`;
+    div.addEventListener('click', ()=>{
+      if(coins>=cost){ coins-=cost; g.owned++; perSec=GENERATORS.reduce((s,x)=>s+x.income*x.owned,0); render(); }
+    });
+    genBox.appendChild(div);
+  });
+}
+document.getElementById('clickBtn').addEventListener('click', ()=>{ coins+=perClick; render(); });
+document.getElementById('upgradeClickBtn').addEventListener('click', ()=>{
+  if(coins>=clickUpgradeCost){ coins-=clickUpgradeCost; perClick*=2; clickUpgradeCost=Math.floor(clickUpgradeCost*3); render(); }
+});
+setInterval(()=>{ coins+=perSec/10; render(); }, 100);
+render();
+</script>
+</body></html>

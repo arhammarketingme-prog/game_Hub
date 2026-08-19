@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>Speed Racer — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; height:100%; overflow:hidden; background:#12141c; font-family:'JetBrains Mono',monospace;}
+#wrap{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
+canvas{background:#2a2a32; touch-action:none;}
+.hud{position:fixed; top:14px; left:0; right:0; display:flex; justify-content:center; gap:10px; z-index:5;}
+.box{background:rgba(32,36,47,0.85); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:6px 14px; text-align:center;}
+.box .lbl{font-size:8.5px; color:#b8b2a4;} .box .val{font-size:15px; font-weight:700; color:#3b82f6;}
+.overlay{position:fixed; inset:0; background:rgba(6,7,11,0.9); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; z-index:10;}
+.overlay.show{display:flex;}
+.overlay h1{font-family:'Fraunces',serif; font-size:26px; margin:0 0 8px; color:#3b82f6;}
+.overlay button{background:#3b82f6; color:#fff; border:none; border-radius:10px; padding:12px 24px; font-weight:700; cursor:pointer; margin-top:14px;}
+.hint{position:fixed; bottom:20px; left:0; right:0; text-align:center; color:#8a8578; font-size:11px; z-index:5;}
+</style></head>
+<body>
+<a href="../../game.html?id=speedracer" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<div id="wrap"><canvas id="c" width="320" height="500"></canvas></div>
+<div class="hud">
+  <div class="box"><div class="lbl">Distance</div><div class="val" id="dist">0</div></div>
+  <div class="box"><div class="lbl">Speed</div><div class="val" id="spd">1x</div></div>
+  <div class="box"><div class="lbl">Combo</div><div class="val" id="combo">0</div></div>
+</div>
+<div class="hint">Swipe left/right or use arrow keys</div>
+<div class="overlay show" id="startOv">
+  <h1>🏎️ Speed Racer</h1>
+  <p style="color:#b8b2a4; font-size:13px; max-width:260px;">Dodge the oncoming cars — the longer you survive, the higher your score. Grab golden coins to build your combo!</p>
+  <button id="startBtn">Start</button>
+</div>
+<div class="overlay" id="overOv">
+  <h1>💥 Crash!</h1>
+  <p id="finalTxt" style="color:#b8b2a4;"></p>
+  <button id="retryBtn">Play Again</button>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const LANES=3, LANE_W=canvas.width/LANES;
+let playerLane=1, obstacles=[], coins=[], dist, speed, combo, running, lastSpawn, animId;
+
+function reset(){
+  playerLane=1; obstacles=[]; coins=[]; dist=0; speed=2.2; combo=0; running=true; lastSpawn=0;
+  document.getElementById('dist').textContent=0; document.getElementById('combo').textContent=0; document.getElementById('spd').textContent='1x';
+}
+function laneX(lane){ return lane*LANE_W + LANE_W/2; }
+function spawnRow(){
+  const blocked = new Set();
+  if(Math.random()<0.7){
+    const lane=Math.floor(Math.random()*LANES);
+    obstacles.push({lane, y:-40});
+    blocked.add(lane);
+  }
+  if(Math.random()<0.3){
+    let lane=Math.floor(Math.random()*LANES);
+    if(blocked.has(lane)) lane=(lane+1)%LANES;
+    coins.push({lane, y:-40});
+  }
+}
+function draw(){
+  ctx.fillStyle='#2a2a32'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.setLineDash([16,16]); ctx.lineWidth=2;
+  for(let i=1;i<LANES;i++){ ctx.beginPath(); ctx.moveTo(i*LANE_W,0); ctx.lineTo(i*LANE_W,canvas.height); ctx.stroke(); }
+  ctx.setLineDash([]);
+  obstacles.forEach(o=>{
+    ctx.fillStyle='#e2725b';
+    ctx.fillRect(laneX(o.lane)-24, o.y-18, 48, 36);
+  });
+  coins.forEach(c=>{
+    ctx.beginPath(); ctx.arc(laneX(c.lane), c.y, 12, 0, Math.PI*2); ctx.fillStyle='#e2bc6b'; ctx.fill();
+  });
+  const py=canvas.height-70;
+  ctx.fillStyle='#4ecca3'; ctx.fillRect(laneX(playerLane)-22, py-20, 44, 40);
+}
+function update(){
+  dist += speed*0.05;
+  speed += 0.0015;
+  document.getElementById('dist').textContent = Math.floor(dist);
+  document.getElementById('spd').textContent = (speed/2.2).toFixed(1)+'x';
+
+  lastSpawn++;
+  const spawnRate = Math.max(22, 45-Math.floor(speed*3));
+  if(lastSpawn>spawnRate){ spawnRow(); lastSpawn=0; }
+
+  obstacles.forEach(o=> o.y += speed);
+  coins.forEach(c=> c.y += speed);
+
+  const py=canvas.height-70;
+  obstacles = obstacles.filter(o=>{
+    if(o.y>canvas.height+40) return false;
+    if(Math.abs(o.y-py)<28 && o.lane===playerLane){ endGame(); return false; }
+    return true;
+  });
+  coins = coins.filter(c=>{
+    if(c.y>canvas.height+40) return false;
+    if(Math.abs(c.y-py)<28 && c.lane===playerLane){
+      combo++; dist += 20; document.getElementById('combo').textContent=combo;
+      return false;
+    }
+    return true;
+  });
+}
+function loop(){
+  if(!running) return;
+  update(); draw();
+  animId=requestAnimationFrame(loop);
+}
+function endGame(){
+  running=false; cancelAnimationFrame(animId);
+  document.getElementById('finalTxt').textContent = `Distance: ${Math.floor(dist)} · Combo: ${combo}`;
+  document.getElementById('overOv').classList.add('show');
+}
+function moveLeft(){ if(playerLane>0) playerLane--; }
+function moveRight(){ if(playerLane<LANES-1) playerLane++; }
+window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft') moveLeft(); if(e.key==='ArrowRight') moveRight(); });
+let touchStartX=0;
+canvas.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; }, {passive:true});
+canvas.addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX-touchStartX;
+  if(dx>30) moveRight(); else if(dx<-30) moveLeft();
+}, {passive:true});
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  document.getElementById('startOv').classList.remove('show');
+  reset(); loop();
+});
+document.getElementById('retryBtn').addEventListener('click', ()=>{
+  document.getElementById('overOv').classList.remove('show');
+  reset(); loop();
+});
+draw();
+</script>
+</body></html>

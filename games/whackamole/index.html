@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Whack-a-Mole — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:22px 16px;}
+h1{font-family:'Fraunces',serif; color:#e2725b; font-size:26px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:12px; margin-bottom:14px;}
+.hud{display:flex; gap:10px; margin-bottom:16px;}
+.score-box{background:#20242f; border:1px solid rgba(226,114,91,0.3); border-radius:10px; padding:7px 16px; text-align:center;}
+.score-box .lbl{font-size:9px; color:#b8b2a4;} .score-box .val{font-size:18px; font-weight:700; color:#e2725b;}
+.startbtn{background:#e2725b; color:#12141c; border:none; border-radius:10px; padding:9px 18px; font-weight:700; font-size:13px; cursor:pointer;}
+#grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:min(90vw,320px);}
+.hole{aspect-ratio:1; background:#20242f; border:1px solid rgba(226,114,91,0.25); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer; overflow:hidden;}
+.hole.up{background:#2a2416;}
+.msg{margin-top:16px; color:#4ecca3; font-size:13px; min-height:18px; text-align:center;}
+</style>
+</head>
+<body>
+<a href="../../game.html?id=whackamole" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<h1>🔨 Whack-a-Mole</h1>
+<div class="sub">30 seconds, catch as many moles as you can</div>
+<div class="hud">
+  <div class="score-box"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
+  <div class="score-box"><div class="lbl">Time</div><div class="val" id="time">30</div></div>
+  <button class="startbtn" id="startBtn">Start</button>
+</div>
+<div id="grid"></div>
+<div class="msg" id="msg"></div>
+<script>
+const N=9;
+let holes=[], score=0, timeLeft=30, running=false, moleTimer=null, clockTimer=null, activeHole=-1;
+const gridEl=document.getElementById('grid'), scoreEl=document.getElementById('score'), timeEl=document.getElementById('time'), msgEl=document.getElementById('msg');
+
+function buildGrid(){
+  gridEl.innerHTML='';
+  holes=[];
+  for(let i=0;i<N;i++){
+    const h=document.createElement('div');
+    h.className='hole';
+    h.addEventListener('click', ()=>whack(i));
+    gridEl.appendChild(h);
+    holes.push(h);
+  }
+}
+function popMole(){
+  if(activeHole>=0) holes[activeHole].classList.remove('up'), holes[activeHole].textContent='';
+  activeHole = Math.floor(Math.random()*N);
+  holes[activeHole].classList.add('up');
+  holes[activeHole].textContent='🦔';
+  const delay = 500 + Math.random()*500;
+  moleTimer = setTimeout(popMole, delay);
+}
+function whack(i){
+  if(!running) return;
+  if(i===activeHole){
+    score++; scoreEl.textContent=score;
+    holes[i].classList.remove('up'); holes[i].textContent='💥';
+    setTimeout(()=>{ if(holes[i]) holes[i].textContent=''; }, 200);
+    activeHole=-1;
+  }
+}
+function startGame(){
+  score=0; timeLeft=30; running=true; msgEl.textContent='';
+  scoreEl.textContent=0; timeEl.textContent=30;
+  buildGrid();
+  popMole();
+  clockTimer = setInterval(()=>{
+    timeLeft--; timeEl.textContent=timeLeft;
+    if(timeLeft<=0) endGame();
+  }, 1000);
+}
+function endGame(){
+  running=false;
+  clearTimeout(moleTimer); clearInterval(clockTimer);
+  holes.forEach(h=>{ h.classList.remove('up'); h.textContent=''; });
+  msgEl.textContent = `⏱️ Time up! Score: ${score}`;
+}
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  clearTimeout(moleTimer); clearInterval(clockTimer);
+  startGame();
+});
+buildGrid();
+</script>
+</body>
+</html>

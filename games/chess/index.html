@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>Chess — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#12141c; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:18px 14px;}
+h1{font-family:'Fraunces',serif; color:#8b5cf6; font-size:22px; margin:0 0 4px;}
+.sub{color:#b8b2a4; font-size:11.5px; margin-bottom:10px; text-align:center;}
+.status{background:#20242f; border:1px solid rgba(139,92,246,0.3); border-radius:8px; padding:6px 16px; margin-bottom:10px; font-size:12.5px; font-weight:700;}
+#board{display:grid; grid-template-columns:repeat(8,1fr); width:min(92vw,340px); aspect-ratio:1; border:2px solid #2a2e3a; border-radius:6px; overflow:hidden;}
+.sq{display:flex; align-items:center; justify-content:center; font-size:26px; cursor:pointer; position:relative;}
+.sq.light{background:#3a3f4d;} .sq.dark{background:#22252e;}
+.sq.selected{background:#c9a34e !important;}
+.sq.legal::after{content:''; position:absolute; width:22%; height:22%; border-radius:50%; background:rgba(78,204,163,0.6);}
+.sq.legalcap{box-shadow:inset 0 0 0 3px rgba(226,114,91,0.8);}
+.white{color:#f5f0e6;} .black{color:#12141c; text-shadow:0 0 2px #fff;}
+.newbtn{margin-top:14px; background:#8b5cf6; color:#fff; border:none; border-radius:10px; padding:9px 18px; font-weight:700; cursor:pointer;}
+</style></head>
+<body>
+<a href="../../game.html?id=chess" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<h1>♟️ Chess</h1>
+<div class="sub">You play White — against the computer (castling supported, no en-passant)</div>
+<div class="status" id="status">Your turn (White)</div>
+<div id="board"></div>
+<button class="newbtn" id="newBtn">New Game</button>
+<script>
+const PIECES={ K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙', k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟' };
+let board, turn, selected, legalMoves, castling, gameOver;
+
+function init(){
+  board=[
+    ['r','n','b','q','k','b','n','r'],
+    ['p','p','p','p','p','p','p','p'],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    ['P','P','P','P','P','P','P','P'],
+    ['R','N','B','Q','K','B','N','R'],
+  ];
+  turn='w'; selected=null; legalMoves=[]; gameOver=false;
+  castling={ wK:true, wQ:true, bK:true, bQ:true };
+  document.getElementById('status').textContent='Your turn (White)';
+  render();
+}
+function isWhite(p){ return p && p===p.toUpperCase(); }
+function isBlack(p){ return p && p===p.toLowerCase(); }
+function inBounds(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
+
+function pseudoMoves(r,c){
+  const p=board[r][c]; if(!p) return [];
+  const white=isWhite(p); const moves=[];
+  const type=p.toUpperCase();
+  const dir = white?-1:1;
+  if(type==='P'){
+    if(inBounds(r+dir,c) && !board[r+dir][c]){
+      moves.push([r+dir,c]);
+      const startRow = white?6:1;
+      if(r===startRow && !board[r+2*dir][c]) moves.push([r+2*dir,c]);
+    }
+    [-1,1].forEach(dc=>{
+      const nr=r+dir, nc=c+dc;
+      if(inBounds(nr,nc) && board[nr][nc] && (white?isBlack(board[nr][nc]):isWhite(board[nr][nc]))) moves.push([nr,nc]);
+    });
+  } else if(type==='N'){
+    [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>{
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc) && (!board[nr][nc] || (white?isBlack(board[nr][nc]):isWhite(board[nr][nc])))) moves.push([nr,nc]);
+    });
+  } else if(type==='K'){
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      if(!dr&&!dc) continue;
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc) && (!board[nr][nc] || (white?isBlack(board[nr][nc]):isWhite(board[nr][nc])))) moves.push([nr,nc]);
+    }
+    // castling
+    const homeRow = white?7:0;
+    if(r===homeRow && c===4){
+      const kFlag = white?'wK':'bK', qFlag = white?'wQ':'bQ';
+      if(castling[kFlag] && !board[homeRow][5] && !board[homeRow][6] && board[homeRow][7]===(white?'R':'r')){
+        if(!isSquareAttacked(homeRow,4,white) && !isSquareAttacked(homeRow,5,white) && !isSquareAttacked(homeRow,6,white)) moves.push([homeRow,6,'OO']);
+      }
+      if(castling[qFlag] && !board[homeRow][3] && !board[homeRow][2] && !board[homeRow][1] && board[homeRow][0]===(white?'R':'r')){
+        if(!isSquareAttacked(homeRow,4,white) && !isSquareAttacked(homeRow,3,white) && !isSquareAttacked(homeRow,2,white)) moves.push([homeRow,2,'OOO']);
+      }
+    }
+  } else {
+    const dirs = type==='R' ? [[-1,0],[1,0],[0,-1],[0,1]]
+      : type==='B' ? [[-1,-1],[-1,1],[1,-1],[1,1]]
+      : [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+    dirs.forEach(([dr,dc])=>{
+      let nr=r+dr, nc=c+dc;
+      while(inBounds(nr,nc)){
+        if(!board[nr][nc]){ moves.push([nr,nc]); }
+        else { if(white?isBlack(board[nr][nc]):isWhite(board[nr][nc])) moves.push([nr,nc]); break; }
+        nr+=dr; nc+=dc;
+      }
+    });
+  }
+  return moves;
+}
+function findKing(white){
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]===(white?'K':'k')) return [r,c];
+  return null;
+}
+function isSquareAttacked(tr,tc,byWhiteDefender){
+  // is square attacked by the OPPONENT of byWhiteDefender
+  const attackerIsWhite = !byWhiteDefender;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p=board[r][c]; if(!p) continue;
+    if(attackerIsWhite ? !isWhite(p) : !isBlack(p)) continue;
+    const mv=pseudoMoves(r,c);
+    if(mv.some(m=>m[0]===tr && m[1]===tc)) return true;
+  }
+  return false;
+}
+function legalMovesFor(r,c){
+  const p=board[r][c]; if(!p) return [];
+  const white=isWhite(p);
+  const pseudo=pseudoMoves(r,c);
+  return pseudo.filter(m=>{
+    const backup=board.map(row=>row.slice());
+    board[m[0]][m[1]]=p; board[r][c]=null;
+    const kingPos = p.toUpperCase()==='K' ? [m[0],m[1]] : findKing(white);
+    const attacked = kingPos ? isSquareAttacked(kingPos[0],kingPos[1],white) : false;
+    board=backup;
+    return !attacked;
+  });
+}
+function allLegalMoves(white){
+  const all=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const p=board[r][c]; if(!p) continue;
+    if(white? !isWhite(p) : !isBlack(p)) continue;
+    legalMovesFor(r,c).forEach(m=> all.push({from:[r,c], to:m}));
+  }
+  return all;
+}
+function makeMove(from,to){
+  const p=board[from[0]][from[1]];
+  const white=isWhite(p);
+  if(p.toUpperCase()==='K'){
+    if(white){ castling.wK=false; castling.wQ=false; } else { castling.bK=false; castling.bQ=false; }
+    if(to[2]==='OO'){ board[from[0]][5]=board[from[0]][7]; board[from[0]][7]=null; }
+    if(to[2]==='OOO'){ board[from[0]][3]=board[from[0]][0]; board[from[0]][0]=null; }
+  }
+  if(p.toUpperCase()==='R'){
+    if(from[0]===7&&from[1]===0) castling.wQ=false;
+    if(from[0]===7&&from[1]===7) castling.wK=false;
+    if(from[0]===0&&from[1]===0) castling.bQ=false;
+    if(from[0]===0&&from[1]===7) castling.bK=false;
+  }
+  board[to[0]][to[1]]=p; board[from[0]][from[1]]=null;
+  if(p.toUpperCase()==='P' && (to[0]===0||to[0]===7)) board[to[0]][to[1]] = white?'Q':'q';
+}
+function render(){
+  const el=document.getElementById('board'); el.innerHTML='';
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const sq=document.createElement('div');
+    sq.className='sq '+((r+c)%2===0?'light':'dark');
+    if(selected && selected[0]===r && selected[1]===c) sq.classList.add('selected');
+    if(legalMoves.some(m=>m[0]===r&&m[1]===c)){
+      sq.classList.add(board[r][c]?'legalcap':'legal');
+    }
+    const p=board[r][c];
+    if(p){ sq.textContent=PIECES[p]; sq.classList.add(isWhite(p)?'white':'black'); }
+    sq.addEventListener('click', ()=>onSquareClick(r,c));
+    el.appendChild(sq);
+  }
+}
+function onSquareClick(r,c){
+  if(gameOver || turn!=='w') return;
+  const p=board[r][c];
+  if(selected){
+    const move=legalMoves.find(m=>m[0]===r&&m[1]===c);
+    if(move){
+      makeMove(selected, move);
+      selected=null; legalMoves=[];
+      afterMove();
+      return;
+    }
+    if(p && isWhite(p)){ selected=[r,c]; legalMoves=legalMovesFor(r,c); render(); return; }
+    selected=null; legalMoves=[]; render(); return;
+  }
+  if(p && isWhite(p)){ selected=[r,c]; legalMoves=legalMovesFor(r,c); render(); }
+}
+function afterMove(){
+  turn='b'; render();
+  checkGameState('b');
+  if(!gameOver){ document.getElementById('status').textContent='Computer is thinking...'; setTimeout(aiMove, 400); }
+}
+function aiMove(){
+  const moves=allLegalMoves(false);
+  if(moves.length===0) return;
+  const VAL={P:1,N:3,B:3,R:5,Q:9,K:0};
+  let best=null, bestScore=-999;
+  moves.forEach(m=>{
+    const target=board[m.to[0]][m.to[1]];
+    let sc = target ? VAL[target.toUpperCase()] : 0;
+    sc += Math.random()*0.7;
+    if(sc>bestScore){ bestScore=sc; best=m; }
+  });
+  makeMove(best.from, best.to);
+  turn='w'; render();
+  checkGameState('w');
+  if(!gameOver) document.getElementById('status').textContent='Your turn (White)';
+}
+function checkGameState(sideToMove){
+  const white = sideToMove==='w';
+  const kingPos=findKing(white);
+  const inCheck = kingPos ? isSquareAttacked(kingPos[0],kingPos[1],white) : false;
+  const moves=allLegalMoves(white);
+  if(moves.length===0){
+    gameOver=true;
+    document.getElementById('status').textContent = inCheck ? (white?'Computer won! (Checkmate)':'🎉 You won! (Checkmate)') : 'Draw (Stalemate)';
+  } else if(inCheck){
+    document.getElementById('status').textContent = (white?'You are in check! ':'Computer is in check! ') + (white?'Your turn':'');
+  }
+}
+document.getElementById('newBtn').addEventListener('click', init);
+init();
+</script>
+</body></html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="mr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>Tower Defense — CodePath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=JetBrains+Mono:wght@600;700&display=swap');
+*{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
+body{margin:0; min-height:100vh; background:#0d0f14; color:#ede6d6; font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; align-items:center; padding:16px;}
+h1{font-family:'Fraunces',serif; color:#e2725b; font-size:22px; margin:0 0 8px;}
+.hud{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; justify-content:center;}
+.box{background:#1a1d26; border:1px solid rgba(226,114,91,0.3); border-radius:8px; padding:6px 12px; text-align:center;}
+.box .lbl{font-size:8.5px; color:#8a8578;} .box .val{font-size:15px; font-weight:700; color:#e2725b;}
+canvas{background:#171a22; border-radius:10px; touch-action:none; max-width:96vw;}
+.controls{display:flex; gap:8px; margin-top:10px;}
+.tbtn{background:#20242f; border:1px solid rgba(226,114,91,0.3); color:#ede6d6; border-radius:8px; padding:9px 14px; font-size:11.5px; cursor:pointer; font-weight:700;}
+.tbtn.active{background:#e2725b; color:#12141c;}
+.msg{margin-top:10px; font-size:12.5px; color:#8a8578; text-align:center; max-width:340px;}
+.overlay{position:fixed; inset:0; background:rgba(6,7,11,0.92); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; z-index:10;}
+.overlay.show{display:flex;}
+.overlay h1{font-size:26px; margin:0 0 8px;}
+.overlay button{background:#e2725b; color:#fff; border:none; border-radius:10px; padding:12px 24px; font-weight:700; cursor:pointer; margin-top:14px;}
+</style></head>
+<body>
+<a href="../../game.html?id=towerdefense" style="position:fixed;top:14px;right:14px;z-index:9999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.3);">✕</a>
+
+<h1>🏰 Tower Defense</h1>
+<div class="hud">
+  <div class="box"><div class="lbl">Lives</div><div class="val" id="lives">10</div></div>
+  <div class="box"><div class="lbl">Gold</div><div class="val" id="gold">100</div></div>
+  <div class="box"><div class="lbl">Wave</div><div class="val" id="wave">1</div></div>
+  <div class="box"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
+</div>
+<canvas id="c" width="360" height="360"></canvas>
+<div class="controls">
+  <button class="tbtn active" id="placeBtn">🗼 Place Tower (₹50)</button>
+  <button class="tbtn" id="startWaveBtn">▶ Start Wave</button>
+</div>
+<div class="msg">Tap the grey tiles beside the path to place a tower. Tap a tower again to upgrade it (₹40).</div>
+<div class="overlay" id="overOv">
+  <h1 id="overTitle"></h1>
+  <p id="overMsg" style="color:#b8b2a4;"></p>
+  <button id="retryBtn">Play Again</button>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const GRID=12, CELL=canvas.width/GRID;
+// Simple zigzag path
+const PATH=[];
+(function buildPath(){
+  let r=0,c=0; PATH.push({r,c});
+  for(c=0;c<GRID-1;c++) PATH.push({r,c:c+1});
+  for(r=0;r<4;r++) PATH.push({r:r+1,c:GRID-1});
+  for(c=GRID-1;c>0;c--) PATH.push({r:5,c:c-1});
+  for(r=5;r<9;r++) PATH.push({r:r+1,c:0});
+  for(c=0;c<GRID-1;c++) PATH.push({r:9,c:c+1});
+  for(r=9;r<GRID;r++) PATH.push({r:r+1<GRID?r+1:GRID-1,c:GRID-1});
+})();
+const pathSet = new Set(PATH.map(p=>p.r+','+p.c));
+
+let towers, enemies, gold, lives, wave, score, running, waveActive, spawnQueue, spawnTimer, placeMode=true;
+function init(){
+  towers=[]; enemies=[]; gold=100; lives=10; wave=1; score=0; running=true; waveActive=false; spawnQueue=[]; spawnTimer=0;
+  updateHud(); document.getElementById('overOv').classList.remove('show');
+  draw();
+}
+function updateHud(){
+  document.getElementById('lives').textContent=lives;
+  document.getElementById('gold').textContent=gold;
+  document.getElementById('wave').textContent=wave;
+  document.getElementById('score').textContent=score;
+}
+function cellCenter(r,c){ return {x:c*CELL+CELL/2, y:r*CELL+CELL/2}; }
+function draw(){
+  ctx.fillStyle='#171a22'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    ctx.fillStyle = pathSet.has(r+','+c) ? '#2a2e3a' : '#1c2029';
+    ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2);
+  }
+  towers.forEach(t=>{
+    const p=cellCenter(t.r,t.c);
+    ctx.beginPath(); ctx.arc(p.x,p.y,CELL*0.32,0,Math.PI*2);
+    ctx.fillStyle = t.level>=3?'#f472b6':t.level===2?'#e2bc6b':'#e2725b';
+    ctx.fill();
+    ctx.fillStyle='#12141c'; ctx.font='bold 10px monospace'; ctx.textAlign='center';
+    ctx.fillText('L'+t.level, p.x, p.y+3);
+  });
+  enemies.forEach(e=>{
+    const pos=posOnPath(e);
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,CELL*0.24,0,Math.PI*2);
+    ctx.fillStyle='#4ecca3'; ctx.fill();
+    const barW=CELL*0.5;
+    ctx.fillStyle='#12141c'; ctx.fillRect(pos.x-barW/2,pos.y-CELL*0.4,barW,4);
+    ctx.fillStyle='#e2725b'; ctx.fillRect(pos.x-barW/2,pos.y-CELL*0.4,barW*(e.hp/e.maxHp),4);
+  });
+}
+function posOnPath(e){
+  const i=Math.floor(e.progress); const frac=e.progress-i;
+  const a=PATH[Math.min(i,PATH.length-1)], b=PATH[Math.min(i+1,PATH.length-1)];
+  const ca=cellCenter(a.r,a.c), cb=cellCenter(b.r,b.c);
+  return { x: ca.x+(cb.x-ca.x)*frac, y: ca.y+(cb.y-ca.y)*frac };
+}
+canvas.addEventListener('click', e=>{
+  if(!running) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(canvas.width/rect.width), y=(e.clientY-rect.top)*(canvas.height/rect.height);
+  const c=Math.floor(x/CELL), r=Math.floor(y/CELL);
+  if(r<0||r>=GRID||c<0||c>=GRID) return;
+  const existing=towers.find(t=>t.r===r&&t.c===c);
+  if(existing){
+    const cost=40*existing.level;
+    if(gold>=cost && existing.level<4){ gold-=cost; existing.level++; existing.damage+=8; existing.range+=8; updateHud(); }
+    return;
+  }
+  if(pathSet.has(r+','+c)) return;
+  if(gold<50) return;
+  gold-=50; towers.push({r,c,level:1,damage:12,range:CELL*1.6,cooldown:0}); updateHud();
+});
+document.getElementById('startWaveBtn').addEventListener('click', ()=>{
+  if(waveActive || !running) return;
+  waveActive=true;
+  const count=5+wave*2;
+  spawnQueue=Array.from({length:count},(_,i)=>({hp:20+wave*10, maxHp:20+wave*10, speed:0.02+wave*0.001, progress:-i*1.6}));
+});
+function spawnTick(){
+  spawnQueue.forEach(e=>{ e.progress+=0.008; });
+  while(spawnQueue.length && spawnQueue[0].progress>=0){
+    enemies.push(spawnQueue.shift());
+  }
+}
+function gameLoop(){
+  if(!running) return;
+  if(waveActive){
+    spawnTick();
+    enemies.forEach(e=> e.progress += e.speed);
+    enemies = enemies.filter(e=>{
+      if(e.progress >= PATH.length-1){ lives--; updateHud(); if(lives<=0) return endGame(false); return false; }
+      return true;
+    });
+    towers.forEach(t=>{
+      t.cooldown = Math.max(0, t.cooldown-1);
+      if(t.cooldown===0){
+        const tp=cellCenter(t.r,t.c);
+        let target=null, bestProg=-1;
+        enemies.forEach(e=>{
+          const ep=posOnPath(e);
+          const d=Math.hypot(ep.x-tp.x, ep.y-tp.y);
+          if(d<=t.range && e.progress>bestProg){ target=e; bestProg=e.progress; }
+        });
+        if(target){
+          target.hp -= t.damage;
+          t.cooldown = 25;
+          if(target.hp<=0){
+            enemies=enemies.filter(e=>e!==target);
+            gold+=8; score+=20; updateHud();
+          }
+        }
+      }
+    });
+    if(waveActive && spawnQueue.length===0 && enemies.length===0){
+      waveActive=false; wave++; gold+=30; score+=100; updateHud();
+    }
+  }
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+function endGame(won){
+  running=false;
+  document.getElementById('overTitle').textContent = won ? '🎉 You won!' : '💥 The fortress has fallen';
+  document.getElementById('overMsg').textContent = `You reached wave ${wave} · Score: ${score}`;
+  document.getElementById('overOv').classList.add('show');
+}
+document.getElementById('retryBtn').addEventListener('click', ()=>{ init(); gameLoop(); });
+init(); gameLoop();
+</script>
+</body></html>
