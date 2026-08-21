@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cafe Rush — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#1a120a;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#2a1d10,#1a120a 70%);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;}
+  .pill b{color:var(--gold);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+  .progresswrap{padding:0 16px 8px;}
+  .progressbar{height:9px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .progressfill{height:100%;background:linear-gradient(90deg,var(--gold),var(--volt));width:0%;transition:width .3s;}
+  .progresslabel{font-size:11px;color:#9494A6;margin-top:4px;text-align:center;}
+  #customers{ flex:1; display:flex; flex-direction:column; gap:8px; padding:10px 14px; overflow-y:auto; }
+  .order-card{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 12px; }
+  .order-emoji{ font-size:26px; }
+  .order-info{ flex:1; }
+  .order-name{ font-size:12.5px; font-weight:700; }
+  .order-item{ font-size:11px; color:#9494A6; }
+  .order-timerbar{ height:5px; border-radius:4px; background:rgba(255,255,255,0.1); overflow:hidden; margin-top:5px; }
+  .order-timerfill{ height:100%; background:var(--volt); }
+  .serve-btn{ width:44px;height:44px;border-radius:10px;background:var(--volt);color:#0A0A0F;font-size:18px;border:none;font-weight:800; }
+  .empty-hint{ text-align:center; color:#9494A6; font-size:12px; padding:30px 20px; }
+  .menu-row{ display:flex; gap:8px; padding:8px 14px 12px; overflow-x:auto; }
+  .menu-item{ flex:none; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; font-size:11px; text-align:center; min-width:56px; }
+  .bottom{padding:0 16px 20px; text-align:center;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+  .overlay{position:absolute;inset:0;background:rgba(8,5,3,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--gold),var(--volt));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:270px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+</style>
+</head>
+<body>
+<div id="app">
+  <a href="../../game.html?id=cafe-rush" style="position:fixed;top:14px;right:14px;z-index:999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;">✕</a>
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=cafe-rush">←</a>
+    <div class="pill">☕ Day <b id="lvlLabel">1</b></div>
+    <div class="pill">💰 <b id="coinLabel">0</b></div>
+    <div class="pill">⏱ <b id="timeLabel">60</b>s</div>
+  </div>
+  <div class="progresswrap">
+    <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+    <div class="progresslabel"><span id="servedNow">0</span> / <span id="servedTarget">8</span> customers served</div>
+  </div>
+
+  <div id="customers"></div>
+  <div class="menu-row" id="menuRow"></div>
+
+  <div class="bottom">
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="restartBtn">⟲ Restart</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">CAFE RUSH</div>
+    <div class="sub">Customers order from the menu below. Tap the matching item, then hit serve before their patience runs out. Hit the target to end the day.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" style="min-width:200px;margin-bottom:10px;" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" style="min-width:200px;" id="restartBtnPause">⟲ Restart</button>
+  </div>
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">DAY COMPLETE!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Day <span id="wonLvl">1</span> complete. +<span id="wonCoins">0</span> coins</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Day</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=cafe-rush">🎮 Back to GameHub</a>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">CAFE CLOSED</div>
+    <div class="sub">Time ran out before you hit the target.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="retryBtn">⟲ Try Again</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=cafe-rush">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CAFE RUSH — time-management order serving
+   ============================================================ */
+const MENU = [
+  { key:'coffee', icon:'☕', name:'Coffee' },
+  { key:'tea', icon:'🍵', name:'Tea' },
+  { key:'cake', icon:'🍰', name:'Cake' },
+  { key:'sandwich', icon:'🥪', name:'Sandwich' },
+  { key:'juice', icon:'🥤', name:'Juice' },
+];
+const FACES = ['🧑','👩','👨','🧔','👵','👴','👧','🧑‍🦱'];
+
+let level = parseInt(localStorage.getItem('cr_level')||'1');
+let coins = parseInt(localStorage.getItem('cr_coins')||'0');
+let gameActive=false, timeLeft=60, served=0, target=8, spawnTimer=0, selectedItem=null;
+let orders = [];
+let lastTick=0;
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function levelConfig(lvl){
+  timeLeft = 55 + lvl*3;
+  target = 6 + lvl*2;
+}
+
+function initGame(){
+  levelConfig(level);
+  coins = coins; served=0; spawnTimer=0.3; orders=[]; selectedItem=null;
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('servedTarget').textContent = target;
+  document.getElementById('coinLabel').textContent = coins;
+  renderMenu();
+  renderOrders();
+  updateHUD();
+}
+
+function renderMenu(){
+  const row = document.getElementById('menuRow');
+  row.innerHTML = MENU.map(m => `<div class="menu-item" data-key="${m.key}" style="cursor:pointer;">${m.icon}<br>${m.name}</div>`).join('');
+  row.querySelectorAll('.menu-item').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedItem = el.dataset.key;
+      row.querySelectorAll('.menu-item').forEach(x=>x.style.borderColor='rgba(255,255,255,0.1)');
+      el.style.borderColor = 'var(--volt)';
+    });
+  });
+}
+
+function spawnOrder(){
+  const item = MENU[Math.floor(Math.random()*MENU.length)];
+  const face = FACES[Math.floor(Math.random()*FACES.length)];
+  orders.push({ id: Math.random().toString(36).slice(2), item: item.key, itemLabel: item.name, itemIcon: item.icon, face, patience: 14 - Math.min(6,level*0.4), maxPatience: 14 - Math.min(6,level*0.4) });
+}
+
+function renderOrders(){
+  const el = document.getElementById('customers');
+  if(!orders.length){
+    el.innerHTML = `<div class="empty-hint">Waiting for the next customer…</div>`;
+    return;
+  }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card">
+      <div class="order-emoji">${o.face}</div>
+      <div class="order-info">
+        <div class="order-name">Wants: ${o.itemIcon} ${o.itemLabel}</div>
+        <div class="order-timerbar"><div class="order-timerfill" style="width:${Math.max(0,o.patience/o.maxPatience*100)}%"></div></div>
+      </div>
+      <button class="serve-btn" data-id="${o.id}">✓</button>
+    </div>`).join('');
+  el.querySelectorAll('.serve-btn').forEach(btn => {
+    btn.addEventListener('click', () => serve(btn.dataset.id));
+  });
+}
+
+function serve(id){
+  if(!gameActive) return;
+  const order = orders.find(o=>o.id===id);
+  if(!order) return;
+  if(selectedItem === order.item){
+    orders = orders.filter(o=>o.id!==id);
+    served++; coins += 5 + level;
+    beep(700,0.08,'triangle',0.03);
+  } else {
+    coins = Math.max(0, coins-2);
+    beep(180,0.1,'sawtooth',0.03);
+  }
+  document.getElementById('coinLabel').textContent = coins;
+  updateHUD();
+  renderOrders();
+  checkWin();
+}
+
+function update(dt){
+  if(!gameActive) return;
+  timeLeft -= dt;
+  if(timeLeft<=0){ gameActive=false; beep(120,0.4,'sawtooth'); show('overScreen'); return; }
+
+  spawnTimer -= dt;
+  if(spawnTimer<=0 && orders.length<5){
+    spawnOrder(); spawnTimer = Math.max(1.2, 3-level*0.1);
+    renderOrders();
+  }
+
+  let changed=false;
+  orders.forEach(o => { o.patience -= dt; if(o.patience<=0) changed=true; });
+  if(changed){
+    const before = orders.length;
+    orders = orders.filter(o=>o.patience>0);
+    if(orders.length<before){ coins=Math.max(0,coins-3); beep(150,0.15,'sawtooth',0.03); }
+  }
+  renderOrders();
+  updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('timeLabel').textContent = Math.ceil(timeLeft);
+  document.getElementById('servedNow').textContent = served;
+  document.getElementById('progressFill').style.width = Math.min(100, served/target*100)+'%';
+}
+
+function checkWin(){
+  if(served>=target && gameActive){
+    gameActive=false;
+    localStorage.setItem('cr_coins', coins);
+    const starCount = timeLeft>25 ? 3 : timeLeft>10 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    document.getElementById('wonCoins').textContent = served*5;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); initGame(); gameActive=true; };
+document.getElementById('pauseBtn') && (document.getElementById('pauseBtn').onclick = () => { if(gameActive){ gameActive=false; show('pauseScreen'); } });
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); gameActive=true; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); initGame(); gameActive=true; };
+document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; };
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('cr_level', level); initGame(); gameActive=true;
+};
+</script>
+</body>
+</html>

@@ -332,5 +332,10 @@ values
   ('diceroll', 'Dice Roll', 'Simple stakes, quick rounds.', 'puzzle', true, 'games/diceroll/index.html', null, 3.8, 13, 520, 'published', false),
   ('rps', 'Rock-Paper-Scissors', 'Best of series against the house.', 'puzzle', true, 'games/rps/index.html', null, 3.9, 18, 710, 'published', false),
   ('balloonpop', 'Pop the Balloon', 'Tap fast, don''t miss a single one.', 'action', true, 'games/balloonpop/index.html', null, 4, 17, 680, 'published', false),
-  ('speedracer', 'Speed Racer', 'Lane-dodge racing, quick sessions.', 'racing', true, 'games/speedracer/index.html', null, 4.2, 33, 1300, 'published', false)
+  ('speedracer', 'Speed Racer', 'Lane-dodge racing, quick sessions.', 'racing', true, 'games/speedracer/index.html', null, 4.2, 33, 1300, 'published', false),
+  ('block-escape', 'Block Escape', 'Push every crate onto its target.', 'puzzle', true, 'games/block-escape/index.html', 'new', 4.4, 11, 430, 'published', false),
+  ('robo-arena', 'Robo Arena', 'Tap to strike. Survive every wave.', 'action', true, 'games/robo-arena/index.html', 'new', 4.5, 13, 510, 'published', false),
+  ('street-drift-x', 'Street Drift X', 'Hold to drift, chain the multiplier.', 'racing', true, 'games/street-drift-x/index.html', 'hot', 4.6, 12, 470, 'published', false),
+  ('cafe-rush', 'Cafe Rush', 'Serve every order before patience runs out.', 'strategy', true, 'games/cafe-rush/index.html', 'new', 4.3, 10, 380, 'published', false),
+  ('penalty-clash', 'Penalty Clash', 'Aim the corners, beat the keeper.', 'sports', true, 'games/penalty-clash/index.html', 'new', 4.4, 9, 350, 'published', false)
 on conflict (slug) do nothing;

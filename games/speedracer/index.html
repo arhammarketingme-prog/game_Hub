@@ -5,7 +5,7 @@
 *{box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; height:100%; overflow:hidden; background:#12141c; font-family:'JetBrains Mono',monospace;}
 #wrap{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
-canvas{background:#2a2a32; touch-action:none;}
+canvas{background:#2a2a32; touch-action:none;width:min(94vw,320px);height:auto;aspect-ratio:320/500;max-height:78vh;}
 .hud{position:fixed; top:14px; left:0; right:0; display:flex; justify-content:center; gap:10px; z-index:5;}
 .box{background:rgba(32,36,47,0.85); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:6px 14px; text-align:center;}
 .box .lbl{font-size:8.5px; color:#b8b2a4;} .box .val{font-size:15px; font-weight:700; color:#3b82f6;}
@@ -58,20 +58,47 @@ function spawnRow(){
     coins.push({lane, y:-40});
   }
 }
+function drawCarShape(cx, cy, w, h, bodyColor){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.shadowColor = bodyColor; ctx.shadowBlur = 10;
+  ctx.fillStyle = bodyColor;
+  const r = w*0.22;
+  ctx.beginPath();
+  ctx.moveTo(-w/2+r, -h/2);
+  ctx.arcTo(w/2, -h/2, w/2, -h/2+r, r);
+  ctx.lineTo(w/2, h/2-r);
+  ctx.arcTo(w/2, h/2, w/2-r, h/2, r);
+  ctx.lineTo(-w/2+r, h/2);
+  ctx.arcTo(-w/2, h/2, -w/2, h/2-r, r);
+  ctx.lineTo(-w/2, -h/2+r);
+  ctx.arcTo(-w/2, -h/2, -w/2+r, -h/2, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(20,20,31,0.55)';
+  ctx.fillRect(-w*0.32, -h*0.3, w*0.64, h*0.26);
+  ctx.fillStyle = '#14141F';
+  const ww=w*0.16, wh=h*0.2;
+  ctx.fillRect(-w/2-ww*0.3, -h*0.32, ww, wh);
+  ctx.fillRect(w/2-ww*0.7, -h*0.32, ww, wh);
+  ctx.fillRect(-w/2-ww*0.3, h*0.12, ww, wh);
+  ctx.fillRect(w/2-ww*0.7, h*0.12, ww, wh);
+  ctx.restore();
+}
 function draw(){
   ctx.fillStyle='#2a2a32'; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.setLineDash([16,16]); ctx.lineWidth=2;
   for(let i=1;i<LANES;i++){ ctx.beginPath(); ctx.moveTo(i*LANE_W,0); ctx.lineTo(i*LANE_W,canvas.height); ctx.stroke(); }
   ctx.setLineDash([]);
   obstacles.forEach(o=>{
-    ctx.fillStyle='#e2725b';
-    ctx.fillRect(laneX(o.lane)-24, o.y-18, 48, 36);
+    drawCarShape(laneX(o.lane), o.y, 40, 56, '#e2725b');
   });
   coins.forEach(c=>{
     ctx.beginPath(); ctx.arc(laneX(c.lane), c.y, 12, 0, Math.PI*2); ctx.fillStyle='#e2bc6b'; ctx.fill();
   });
   const py=canvas.height-70;
-  ctx.fillStyle='#4ecca3'; ctx.fillRect(laneX(playerLane)-22, py-20, 44, 40);
+  drawCarShape(laneX(playerLane), py, 38, 54, '#4ecca3');
 }
 function update(){
   dist += speed*0.05;

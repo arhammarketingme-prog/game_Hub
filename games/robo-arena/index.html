@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Robo Arena — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#100a0a;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:radial-gradient(circle at 50% 55%,#241414,#100a0a 75%);}
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .hud-left{display:flex;flex-direction:column;gap:6px;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .hp-bar{width:110px;height:9px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);}
+  .hp-fill{height:100%;background:linear-gradient(90deg,var(--hot),#ff8a5c);width:100%;transition:width .2s;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+  .toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(198,255,61,0.92);color:#0A0A0F;padding:8px 18px;border-radius:20px;font-weight:700;font-size:13px;z-index:6;opacity:0;transition:opacity .3s, top .3s;}
+  .toast.show{opacity:1;top:80px;}
+  .overlay{position:absolute;inset:0;background:rgba(6,4,4,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--hot),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--volt);}
+  .stat span{font-size:11px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="hud-left">
+      <div class="pill">❤️ <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div></div>
+      <div class="pill">🌊 Wave <b id="waveLabel">1</b></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="pauseBtn">⏸</button>
+      <a class="icon-btn" href="../../game.html?id=robo-arena">✕</a>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">ROBO ARENA</div>
+    <div class="sub">Tap enemies to strike them. Stay mobile — drag to move. Clear each wave, upgrade between rounds, survive the boss.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="title" style="font-size:22px;">PAUSED</div>
+    <button class="btn btn-primary" id="resumeBtn">▶ Resume</button>
+    <button class="btn btn-ghost" id="restartBtnPause">⟲ Restart</button>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">DESTROYED</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalWave">1</b><span>WAVE</span></div>
+      <div class="stat"><b id="finalScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Fight Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=robo-arena" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ROBO ARENA — tap-to-attack melee arena combat
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  SCALE = Math.min(2.1, Math.max(0.85, Math.min(canvas.width, canvas.height) / 420));
+}
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let state='menu';
+let player = { x:0, y:0, r:20*SCALE, hp:120, maxHp:120, atk:18 };
+let enemies=[], particles=[];
+let wave=1, score=0, waveActive=false, waveTimer=0, spawnLeft=0;
+let best = parseInt(localStorage.getItem('robo_best')||'0');
+let lastTick=0, dragging=false;
+
+function resetGame(){
+  player.x=canvas.width/2; player.y=canvas.height/2; player.hp=120; player.maxHp=120;
+  enemies=[]; particles=[]; wave=1; score=0; waveActive=false; waveTimer=0.8; spawnLeft=0;
+  updateHUD();
+}
+
+function startWave(){
+  waveActive = true;
+  spawnLeft = 3 + wave;
+  const isBoss = wave % 5 === 0;
+  if(isBoss){
+    enemies.push(makeEnemy(true));
+    spawnLeft = 0;
+    toast('⚠ BOSS WAVE');
+  }
+}
+
+function makeEnemy(boss){
+  const angle = Math.random()*Math.PI*2;
+  const dist = Math.max(canvas.width,canvas.height)*0.6;
+  return {
+    x: player.x + Math.cos(angle)*dist, y: player.y + Math.sin(angle)*dist,
+    r: (boss?32:14)*SCALE, hp: boss?140+wave*15:16+wave*2, maxHp: boss?140+wave*15:16+wave*2,
+    speed: boss?0.7:1.1+Math.random()*0.5, boss, dmg: boss?22:9, lastHit:0
+  };
+}
+
+function update(dt){
+  if(state!=='playing') return;
+
+  if(!waveActive){
+    waveTimer -= dt;
+    if(waveTimer<=0) startWave();
+  } else {
+    if(spawnLeft>0 && enemies.length<4 && Math.random()<0.05){
+      enemies.push(makeEnemy(false)); spawnLeft--;
+    }
+    if(enemies.length===0 && spawnLeft<=0){
+      waveActive=false; waveTimer=1.2; wave++; score+=20;
+      document.getElementById('waveLabel').textContent = wave;
+    }
+  }
+
+  const now = performance.now();
+  enemies.forEach(en => {
+    const a = Math.atan2(player.y-en.y, player.x-en.x);
+    en.x += Math.cos(a)*en.speed; en.y += Math.sin(a)*en.speed;
+    const d = Math.hypot(en.x-player.x, en.y-player.y);
+    if(d < en.r+player.r && now-en.lastHit>700){
+      en.lastHit = now;
+      player.hp -= en.dmg;
+      spawnParticles(player.x,player.y,'#FF3D6E');
+      beep(140,0.06,'square',0.02);
+    }
+  });
+
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});
+  particles = particles.filter(p=>p.life>0);
+
+  if(player.hp<=0){ gameOver(); }
+  updateHUD();
+}
+
+function spawnParticles(x,y,color){
+  for(let i=0;i<10;i++){
+    const a=Math.random()*Math.PI*2, sp=1+Math.random()*3;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:20,color});
+  }
+}
+
+function attack(px,py){
+  if(state!=='playing') return;
+  let hit=false;
+  enemies.forEach(en => {
+    if(en.dead) return;
+    if(Math.hypot(px-en.x,py-en.y) < en.r+24){
+      en.hp -= player.atk; hit=true;
+      spawnParticles(en.x,en.y,'#C6FF3D');
+      if(en.hp<=0){
+        en.dead=true; score += en.boss?100:10;
+        if(en.boss){ toast('BOSS DESTROYED'); beep(180,0.4,'sawtooth',0.08); }
+        beep(500,0.08,'triangle',0.03);
+      } else {
+        beep(300,0.05,'square',0.02);
+      }
+    }
+  });
+  enemies = enemies.filter(en=>!en.dead);
+  if(!hit) beep(200,0.04,'sine',0.015);
+}
+
+function updateHUD(){
+  document.getElementById('hpFill').style.width = Math.max(0,(player.hp/player.maxHp*100))+'%';
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1200);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p => { ctx.globalAlpha=p.life/20; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  enemies.forEach(en => {
+    ctx.fillStyle = en.boss ? '#FF3D6E' : '#7A5CFF';
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(en.x,en.y,en.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+    if(en.hp<en.maxHp){
+      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2,4);
+      ctx.fillStyle='#C6FF3D'; ctx.fillRect(en.x-en.r,en.y-en.r-8,en.r*2*(en.hp/en.maxHp),4);
+    }
+  });
+
+  if(state==='playing' || state==='paused'){
+    ctx.fillStyle='#F3F3F7'; ctx.shadowColor='#C6FF3D'; ctx.shadowBlur=16;
+    ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function getPos(e){
+  const rect=canvas.getBoundingClientRect();
+  const t = e.touches ? (e.touches[0]||e.changedTouches[0]) : e;
+  return { x:t.clientX-rect.left, y:t.clientY-rect.top };
+}
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const p = getPos(e);
+  attack(p.x,p.y);
+  dragging = true; dragTarget = p;
+}, {passive:false});
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(dragging) dragTarget = getPos(e);
+}, {passive:false});
+canvas.addEventListener('touchend', ()=>dragging=false);
+canvas.addEventListener('click', e=>{
+  const rect=canvas.getBoundingClientRect();
+  attack(e.clientX-rect.left, e.clientY-rect.top);
+});
+let dragTarget=null;
+addEventListener('keydown', e=>{
+  const speed=8;
+  if(e.key==='ArrowUp') player.y-=speed;
+  if(e.key==='ArrowDown') player.y+=speed;
+  if(e.key==='ArrowLeft') player.x-=speed;
+  if(e.key==='ArrowRight') player.x+=speed;
+});
+setInterval(()=>{
+  if(dragging && dragTarget && state==='playing'){
+    player.x += (dragTarget.x-player.x)*0.15;
+    player.y += (dragTarget.y-player.y)*0.15;
+  }
+}, 16);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { resetGame(); hide('startScreen'); state='playing'; };
+document.getElementById('pauseBtn').onclick = () => { if(state==='playing'){ state='paused'; show('pauseScreen'); } };
+document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); state='playing'; };
+document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function gameOver(){
+  if(state!=='playing') return;
+  state='over'; beep(110,0.4,'sawtooth',0.08);
+  if(score>best){ best=score; localStorage.setItem('robo_best', best); }
+  document.getElementById('finalWave').textContent = wave;
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

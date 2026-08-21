@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Block Escape — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#0d0f17;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#1a1e2e,#0d0f17 70%);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+  .goalbar{padding:0 16px 10px;font-size:12px;color:#9494A6;text-align:center;}
+  #board{ flex:1; display:grid; gap:3px; padding:10px 20px; align-content:center; justify-content:center; }
+  .cell{ position:relative; border-radius:6px; aspect-ratio:1/1; width:11vw; max-width:52px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .cell.floor{ background:rgba(255,255,255,0.04); }
+  .cell.wall{ background:rgba(255,255,255,0.1); }
+  .cell.target{ background:rgba(198,255,61,0.12); border:1px dashed rgba(198,255,61,0.4); }
+  .cell.crate{ background:#7A5CFF; }
+  .cell.crate.onTarget{ background:var(--volt); }
+  .cell.player{ background:transparent; }
+  .cell.player::after{ content:'🧍'; }
+  .bottom{padding:12px 16px 20px; text-align:center;}
+  .padwrap{display:grid; grid-template-columns:repeat(3,50px); grid-template-rows:repeat(2,44px); gap:6px; justify-content:center; margin-bottom:12px;}
+  .padbtn{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); border-radius:8px; font-size:16px; color:#fff;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+  .overlay{position:absolute;inset:0;background:rgba(6,7,12,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:270px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+</style>
+</head>
+<body>
+<div id="app">
+  <a href="../../game.html?id=block-escape" style="position:fixed;top:14px;right:14px;z-index:999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;">✕</a>
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=block-escape">←</a>
+    <div class="pill">📦 Level <b id="lvlLabel">1</b></div>
+    <div class="pill">👣 <b id="movesLabel">0</b></div>
+    <span style="width:34px;"></span>
+  </div>
+  <div class="goalbar">Push every crate onto a glowing target</div>
+
+  <div id="board"></div>
+
+  <div class="bottom">
+    <div class="padwrap">
+      <span></span><button class="padbtn" data-dir="up">↑</button><span></span>
+      <button class="padbtn" data-dir="left">←</button><button class="padbtn" data-dir="down">↓</button><button class="padbtn" data-dir="right">→</button>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="undoBtn">⟲ Undo</button>
+      <button class="btn btn-ghost" id="restartBtn">🔄 Restart</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">BLOCK ESCAPE</div>
+    <div class="sub">Push every crate onto a glowing target tile. Use the D-pad or swipe. Fewer moves earns more stars.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">SOLVED!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Level <span id="wonLvl">1</span> complete in <span id="wonMoves">0</span> moves.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Level</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=block-escape">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   BLOCK ESCAPE — Sokoban-style push puzzle
+   Grid legend: # wall, . floor, T target, C crate, P player
+   ============================================================ */
+const LEVELS = [
+  ["#####","#P..#","#.C.#","#..T#","#####"],
+  ["######","#P...#","#.CC.#","#.TT.#","#....#","######"],
+  ["#######","#..P..#","#.C.C.#","#.T.T.#","#..C..#","#..T..#","#######"]
+];
+let level = parseInt(localStorage.getItem('be_level')||'1');
+let grid = [], playerPos = {}, moves = 0, history = [], gameActive = false;
+
+const boardEl = document.getElementById('board');
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function loadLevel(){
+  const idx = (level-1) % LEVELS.length;
+  const template = LEVELS[idx];
+  grid = template.map(row => row.split(''));
+  moves = 0; history = [];
+  for(let r=0;r<grid.length;r++){
+    for(let c=0;c<grid[r].length;c++){
+      if(grid[r][c]==='P'){ playerPos={r,c}; grid[r][c]='.'; }
+    }
+  }
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('movesLabel').textContent = moves;
+  render();
+}
+
+function cellType(r,c){ return grid[r] ? grid[r][c] : '#'; }
+
+function render(){
+  const rows = grid.length, cols = grid[0].length;
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  boardEl.innerHTML = '';
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const t = grid[r][c];
+      const el = document.createElement('div');
+      let cls = 'cell ';
+      if(t==='#') cls += 'wall';
+      else if(t==='T') cls += 'target';
+      else if(t==='C') cls += 'crate';
+      else if(t==='X') cls += 'crate onTarget';
+      else cls += 'floor';
+      if(playerPos.r===r && playerPos.c===c) cls += ' player';
+      el.className = cls;
+      boardEl.appendChild(el);
+    }
+  }
+}
+
+function saveHistory(){
+  history.push({ grid: grid.map(row=>row.slice()), playerPos: {...playerPos}, moves });
+  if(history.length>50) history.shift();
+}
+
+function move(dir){
+  if(!gameActive) return;
+  const deltas = { up:[-1,0], down:[1,0], left:[0,-1], right:[0,1] };
+  const [dr,dc] = deltas[dir];
+  const nr = playerPos.r+dr, nc = playerPos.c+dc;
+  const target = cellType(nr,nc);
+  if(target==='#') return;
+
+  if(target==='C' || target==='X'){
+    const nnr = nr+dr, nnc = nc+dc;
+    const beyond = cellType(nnr,nnc);
+    if(beyond==='#' || beyond==='C' || beyond==='X') return;
+    saveHistory();
+    grid[nr][nc] = (target==='X') ? 'T' : '.';
+    grid[nnr][nnc] = (beyond==='T') ? 'X' : 'C';
+    playerPos = {r:nr,c:nc};
+    moves++;
+    beep(400,0.06,'square',0.03);
+  } else {
+    saveHistory();
+    playerPos = {r:nr,c:nc};
+    moves++;
+    beep(300,0.04,'sine',0.02);
+  }
+  document.getElementById('movesLabel').textContent = moves;
+  render();
+  checkWin();
+}
+
+function checkWin(){
+  const hasUnsolvedCrate = grid.some(row => row.includes('C'));
+  if(!hasUnsolvedCrate){
+    gameActive = false;
+    const par = 12 + level*2;
+    const starCount = moves <= par ? 3 : moves <= par*1.5 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    document.getElementById('wonMoves').textContent = moves;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+function undo(){
+  if(!gameActive || !history.length) return;
+  const last = history.pop();
+  grid = last.grid; playerPos = last.playerPos; moves = last.moves;
+  document.getElementById('movesLabel').textContent = moves;
+  render();
+}
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); loadLevel(); gameActive=true; };
+document.getElementById('undoBtn').onclick = undo;
+document.getElementById('restartBtn').onclick = () => { loadLevel(); gameActive=true; };
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('be_level', level); loadLevel(); gameActive=true;
+};
+
+document.querySelectorAll('.padbtn').forEach(b => {
+  b.addEventListener('click', () => move(b.dataset.dir));
+});
+addEventListener('keydown', e => {
+  const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+  if(map[e.key]) move(map[e.key]);
+});
+
+// swipe support
+let touchStart = null;
+document.getElementById('board').addEventListener('touchstart', e => {
+  touchStart = { x:e.touches[0].clientX, y:e.touches[0].clientY };
+}, {passive:true});
+document.getElementById('board').addEventListener('touchend', e => {
+  if(!touchStart) return;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(Math.abs(dx) > 20) move(dx>0 ? 'right':'left');
+  } else {
+    if(Math.abs(dy) > 20) move(dy>0 ? 'down':'up');
+  }
+  touchStart = null;
+}, {passive:true});
+</script>
+</body>
+</html>

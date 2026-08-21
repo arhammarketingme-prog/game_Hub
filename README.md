@@ -16,9 +16,9 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## 32 games live
+## 37 games live
 
-Category spread: **Puzzle 15 · Action 10 · Racing 2 · Strategy 4 · Sports 1**
+Category spread: **Puzzle 16 · Action 11 · Racing 3 · Strategy 5 · Sports 2**
 
 The original 8 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build — see each game's own file for its specific mechanic. All 32 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
 
