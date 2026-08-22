@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Game — GameHub</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="Play Now — GameHub">
+<meta property="og:description" content="Instant-play in your browser. No download, no wait.">
+<meta property="og:image" content="https://arhammarketingme-prog.github.io/game_Hub/assets/icons/og-banner.png">
+<meta property="og:url" content="https://arhammarketingme-prog.github.io/game_Hub/game.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Play Now — GameHub">
+<meta name="twitter:description" content="Instant-play in your browser. No download, no wait.">
+<meta name="twitter:image" content="https://arhammarketingme-prog.github.io/game_Hub/assets/icons/og-banner.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0A0A0F">
 <link rel="stylesheet" href="css/style.css">
@@ -49,6 +58,10 @@
   <div class="g-actions">
     <a class="btn btn-primary" id="play-btn" href="#">▶ Play Now</a>
     <button class="btn btn-ghost" id="wishlist-btn">＋ Library</button>
+  </div>
+
+  <div class="g-actions" style="margin-top:8px;">
+    <button class="btn btn-ghost" id="share-btn" style="flex:1;">📤 Share with Friends</button>
   </div>
 
   <p class="g-desc" id="g-desc">—</p>
@@ -111,8 +124,9 @@
     });
     document.getElementById("share-btn").addEventListener("click", (e) => {
       e.preventDefault();
-      if(navigator.share){ navigator.share({ title: game.name, url: location.href }); }
-      else { navigator.clipboard.writeText(location.href); alert("Link copied!"); }
+      const shareText = `🎮 ${game.name} khel! ${game.tagline || ''} GameHub var free madhe khela:`;
+      if(navigator.share){ navigator.share({ title: game.name, text: shareText, url: location.href }); }
+      else { navigator.clipboard.writeText(shareText + " " + location.href); alert("Link copied!"); }
     });
     document.getElementById("report-btn").addEventListener("click", () => {
       alert("Thanks — our moderation team will review this game.");

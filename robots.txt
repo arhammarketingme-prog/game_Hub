@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://arhammarketingme-prog.github.io/game_Hub/sitemap.xml
