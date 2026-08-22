@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Turbo Drift Arena — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#0a0a10;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:radial-gradient(circle at 50% 50%,#181822,#0a0a10 80%);}
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+  .combo-toast{position:absolute;top:90px;left:50%;transform:translateX(-50%);background:rgba(198,255,61,0.92);color:#0A0A0F;padding:6px 18px;border-radius:20px;font-weight:900;font-size:15px;z-index:6;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .combo-toast.show{opacity:1;}
+  .drift-btn{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--hot),#ff7a9c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;border:none;box-shadow:0 4px 20px rgba(255,61,110,0.4);z-index:6;}
+  .drift-btn:active{transform:translateX(-50%) scale(0.92);}
+  .steer-zone{position:absolute;top:0;bottom:0;width:50%;z-index:4;}
+  .overlay{position:absolute;inset:0;background:rgba(4,4,8,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--hot),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--volt);}
+  .stat span{font-size:11px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div style="display:flex;gap:8px;">
+      <div class="pill">🏆 <b id="scoreLabel">0</b></div>
+      <div class="pill">⏱ <b id="timeLabel">60</b>s</div>
+    </div>
+    <a class="icon-btn" href="../../game.html?id=turbo-drift-arena">✕</a>
+  </div>
+  <div class="combo-toast" id="comboToast"></div>
+  <div class="steer-zone" id="zoneLeft" style="left:0;"></div>
+  <div class="steer-zone" id="zoneRight" style="right:0;"></div>
+  <button class="drift-btn" id="driftBtn">DRIFT</button>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">TURBO DRIFT ARENA</div>
+    <div class="sub">Tap left/right to steer around the arena. Hold DRIFT through corners for score — the longer the slide, the bigger the combo. 60 second run.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">TIME'S UP</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Drift Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=turbo-drift-arena" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   TURBO DRIFT ARENA — hold-to-drift arena scoring
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  SCALE = Math.min(2.1, Math.max(0.85, Math.min(canvas.width, canvas.height) / 420));
+}
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let state='menu';
+let carAngle=0, carSpeed=3.2, radius=0, centerX=0, centerY=0, carPos=0;
+let steering=0, drifting=false, driftTime=0, comboCount=0;
+let score=0, timeLeft=60;
+let best = parseInt(localStorage.getItem('tda_best')||'0');
+let trail=[];
+let lastTick=0;
+
+function resetGame(){
+  centerX=canvas.width/2; centerY=canvas.height/2;
+  radius = Math.min(canvas.width,canvas.height)*0.32;
+  carPos=0; steering=0; drifting=false; driftTime=0; comboCount=0;
+  score=0; timeLeft=60; trail=[];
+  updateHUD();
+}
+
+function update(dt){
+  if(state!=='playing') return;
+  timeLeft -= dt;
+  if(timeLeft<=0){ timeLeft=0; finishRun(); }
+
+  const wobble = drifting ? steering*0.045 : steering*0.018;
+  carPos += (carSpeed/radius)*dt*60*0.016 + wobble*dt*60*0.01;
+
+  if(drifting){
+    driftTime += dt;
+    score += Math.round((10+comboCount*2)*dt);
+    if(driftTime>0.4 && Math.floor(driftTime*2)%1===0){
+      comboCount = Math.min(8, Math.floor(driftTime));
+    }
+  } else {
+    if(driftTime>0.5){
+      toastCombo(driftTime);
+    }
+    driftTime=0; comboCount=0;
+  }
+
+  const angle = carPos;
+  const wobbleR = drifting ? Math.sin(carPos*6)*14*SCALE : 0;
+  const x = centerX + Math.cos(angle)*(radius+wobbleR);
+  const y = centerY + Math.sin(angle)*(radius+wobbleR)*0.55;
+  trail.push({x,y,life:drifting?26:0});
+  if(trail.length>60) trail.shift();
+  trail.forEach(t=>t.life-=1);
+  trail = trail.filter(t=>t.life>-5);
+
+  updateHUD();
+}
+
+function toastCombo(dt_){
+  const pts = Math.round(dt_*20);
+  const t=document.getElementById('comboToast');
+  t.textContent = `DRIFT COMBO +${pts}`;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 500);
+  beep(600+comboCount*40, 0.15, 'triangle');
+}
+
+function updateHUD(){
+  document.getElementById('scoreLabel').textContent = Math.floor(score);
+  document.getElementById('timeLabel').textContent = Math.ceil(timeLeft);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // arena track
+  ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=44*SCALE;
+  ctx.beginPath(); ctx.ellipse(centerX,centerY,radius,radius*0.55,0,0,7); ctx.stroke();
+  ctx.strokeStyle='rgba(122,92,255,0.25)'; ctx.lineWidth=2; ctx.setLineDash([10,10]);
+  ctx.beginPath(); ctx.ellipse(centerX,centerY,radius,radius*0.55,0,0,7); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // trail
+  trail.forEach(t=>{
+    if(t.life<=0) return;
+    ctx.globalAlpha = t.life/26*0.5;
+    ctx.fillStyle='#FF3D6E';
+    ctx.beginPath(); ctx.arc(t.x,t.y,6*SCALE,0,7); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // car
+  const wobbleR = drifting ? Math.sin(carPos*6)*14*SCALE : 0;
+  const x = centerX + Math.cos(carPos)*(radius+wobbleR);
+  const y = centerY + Math.sin(carPos)*(radius+wobbleR)*0.55;
+  const heading = carPos + Math.PI/2 + (drifting ? steering*0.5 : 0);
+
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(heading);
+  const w=34*SCALE, h=18*SCALE;
+  ctx.fillStyle = drifting ? '#FF3D6E' : '#C6FF3D';
+  ctx.shadowColor = drifting ? '#FF3D6E' : '#C6FF3D'; ctx.shadowBlur=12;
+  const r=h*0.3;
+  ctx.beginPath();
+  ctx.moveTo(-w/2+r,-h/2); ctx.arcTo(w/2,-h/2,w/2,-h/2+r,r);
+  ctx.lineTo(w/2,h/2-r); ctx.arcTo(w/2,h/2,w/2-r,h/2,r);
+  ctx.lineTo(-w/2+r,h/2); ctx.arcTo(-w/2,h/2,-w/2,h/2-r,r);
+  ctx.lineTo(-w/2,-h/2+r); ctx.arcTo(-w/2,-h/2,-w/2+r,-h/2,r);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(20,20,31,0.6)';
+  ctx.fillRect(-w*0.15,-h*0.32,w*0.32,h*0.64);
+  ctx.restore();
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('zoneLeft').addEventListener('touchstart', e=>{e.preventDefault(); steering=-1;}, {passive:false});
+document.getElementById('zoneRight').addEventListener('touchstart', e=>{e.preventDefault(); steering=1;}, {passive:false});
+document.getElementById('zoneLeft').addEventListener('touchend', ()=>steering=0);
+document.getElementById('zoneRight').addEventListener('touchend', ()=>steering=0);
+document.getElementById('zoneLeft').addEventListener('mousedown', ()=>steering=-1);
+document.getElementById('zoneRight').addEventListener('mousedown', ()=>steering=1);
+addEventListener('mouseup', ()=>steering=0);
+
+const driftBtn = document.getElementById('driftBtn');
+driftBtn.addEventListener('touchstart', e=>{e.preventDefault(); drifting=true;}, {passive:false});
+driftBtn.addEventListener('touchend', e=>{e.preventDefault(); drifting=false;}, {passive:false});
+driftBtn.addEventListener('mousedown', ()=>drifting=true);
+driftBtn.addEventListener('mouseup', ()=>drifting=false);
+addEventListener('keydown', e=>{ if(e.key===' ') drifting=true; if(e.key==='ArrowLeft') steering=-1; if(e.key==='ArrowRight') steering=1; });
+addEventListener('keyup', e=>{ if(e.key===' ') drifting=false; if(e.key==='ArrowLeft'||e.key==='ArrowRight') steering=0; });
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function finishRun(){
+  if(state!=='playing') return;
+  state='over';
+  const finalScore = Math.floor(score);
+  if(finalScore>best){ best=finalScore; localStorage.setItem('tda_best', best); }
+  document.getElementById('finalScore').textContent = finalScore;
+  document.getElementById('finalBest').textContent = best;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

@@ -342,5 +342,10 @@ values
   ('street-cricket', 'Street Cricket', 'Time your swing. Sixes need precision.', 'sports', true, 'games/street-cricket/index.html', 'new', 4.3, 7, 290, 'published', false),
   ('sky-track', 'Sky Track', 'Floating lanes, real gaps, no second chances.', 'racing', true, 'games/sky-track/index.html', 'new', 4.4, 7, 260, 'published', false),
   ('city-builder-mini', 'City Builder Mini', 'Zone, build, grow your population.', 'strategy', true, 'games/city-builder-mini/index.html', 'new', 4.3, 8, 310, 'published', false),
-  ('monster-rush', 'Monster Rush', 'Survive the swarm, grab the upgrades.', 'action', true, 'games/monster-rush/index.html', 'hot', 4.5, 11, 440, 'published', false)
+  ('monster-rush', 'Monster Rush', 'Survive the swarm, grab the upgrades.', 'action', true, 'games/monster-rush/index.html', 'hot', 4.5, 11, 440, 'published', false),
+  ('archery-master', 'Archery Master', 'Drag to aim, release to fire.', 'sports', true, 'games/archery-master/index.html', 'new', 4.4, 7, 270, 'published', false),
+  ('turbo-drift-arena', 'Turbo Drift Arena', 'Hold to drift, chase the combo.', 'racing', true, 'games/turbo-drift-arena/index.html', 'hot', 4.5, 10, 380, 'published', false),
+  ('zombie-siege', 'Zombie Siege', 'Defend your base, wave after wave.', 'action', true, 'games/zombie-siege/index.html', 'new', 4.4, 8, 330, 'published', false),
+  ('gem-swap', 'Gem Swap', 'Match, chain, and clear the board.', 'puzzle', true, 'games/gem-swap/index.html', 'hot', 4.6, 11, 420, 'published', false),
+  ('trade-route', 'Trade Route', 'Buy low, sail far, sell high.', 'strategy', true, 'games/trade-route/index.html', 'new', 4.3, 6, 250, 'published', false)
 on conflict (slug) do nothing;

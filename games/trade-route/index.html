@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trade Route — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#120d08;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#241a10,#120d08 70%);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;gap:6px;flex-wrap:wrap;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:11.5px;font-weight:700;display:flex;gap:5px;align-items:center;}
+  .pill b{color:var(--gold);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+  .goalbar{padding:0 16px 8px;font-size:11.5px;color:#9494A6;text-align:center;}
+  .goalbar b{color:#fff;}
+  .progressbar{height:8px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;margin:0 16px 10px;}
+  .progressfill{height:100%;background:linear-gradient(90deg,var(--gold),var(--volt));width:0%;transition:width .3s;}
+  #routeWrap{ flex:1; overflow-y:auto; padding:0 14px; }
+  .city-card{ background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; margin-bottom:10px; }
+  .city-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-weight:800; font-size:13px; }
+  .goods-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
+  .good{ flex:none; background:rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px; min-width:70px; text-align:center; }
+  .good .icon{ font-size:18px; }
+  .good .price{ font-family:monospace; font-size:12px; color:var(--gold); margin:2px 0; }
+  .good button{ width:100%; padding:5px; border-radius:6px; border:none; font-size:10px; font-weight:800; margin-top:3px; }
+  .buy-btn{ background:var(--volt); color:#0A0A0F; }
+  .sell-btn{ background:var(--hot); color:#fff; }
+  .cargo-strip{ display:flex; gap:6px; padding:8px 16px; overflow-x:auto; }
+  .cargo-item{ flex:none; background:rgba(198,255,61,0.1); border:1px solid rgba(198,255,61,0.3); border-radius:8px; padding:4px 10px; font-size:11px; }
+  .bottom{padding:0 16px 20px; text-align:center;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+  .overlay{position:absolute;inset:0;background:rgba(6,4,2,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--gold),var(--volt));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+  .toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(255,214,92,0.92);color:#221a00;padding:8px 18px;border-radius:20px;font-weight:700;font-size:13px;z-index:6;opacity:0;transition:opacity .3s, top .3s;}
+  .toast.show{opacity:1;top:80px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <a href="../../game.html?id=trade-route" style="position:fixed;top:14px;right:14px;z-index:999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;">✕</a>
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=trade-route">←</a>
+    <div class="pill">🗺️ Trip <b id="tripLabel">1</b>/<b id="tripTotal">8</b></div>
+    <div class="pill">🪙 <b id="goldLabel">100</b></div>
+    <div class="pill">📦 <b id="cargoCount">0</b>/<b id="cargoMax">6</b></div>
+  </div>
+  <div class="goalbar">Grow gold to <b id="goalLabel">400</b> before your trips run out</div>
+  <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+
+  <div class="cargo-strip" id="cargoStrip"></div>
+  <div id="routeWrap"><div id="cityCard"></div></div>
+
+  <div class="bottom">
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="restartBtn">⟲ Restart</button>
+      <button class="btn btn-primary" id="travelBtn">🚢 Travel to Next City</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">TRADE ROUTE</div>
+    <div class="sub">Buy goods cheap, sail to the next city, sell where prices are higher. Watch your cargo limit and gold target — prices shift with every trip.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">FORTUNE MADE!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Journey <span id="wonLvl">1</span> complete.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Journey</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=trade-route">🎮 Back to GameHub</a>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">ROUTE ENDED</div>
+    <div class="sub">Final gold: <span id="finalGold">0</span> / <span id="finalGoal">400</span></div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="retryBtn">⟲ Try Again</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=trade-route">🎮 Back to GameHub</a>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   TRADE ROUTE — buy-low-sell-high trading strategy
+   ============================================================ */
+const GOODS = [
+  { key:'silk', icon:'🧵', name:'Silk' },
+  { key:'spice', icon:'🌶️', name:'Spice' },
+  { key:'gem', icon:'💎', name:'Gems' },
+  { key:'tea', icon:'🍵', name:'Tea' },
+];
+const CITIES = ['Porto Nova','Sandhaven','Ivory Reach','Coral Bay','Amber Hold','Silverport','Duskmere','Goldcrest'];
+
+let level = parseInt(localStorage.getItem('tr_level')||'1');
+let gold=100, cargoMax=6, cargo={}, trip=1, tripTotal=8, target=400, prices={}, gameActive=false;
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function levelConfig(lvl){
+  target = 350 + (lvl-1)*200;
+  tripTotal = 8;
+  cargoMax = 6 + Math.min(4,Math.floor(lvl/2));
+}
+
+function rollPrices(){
+  const p = {};
+  GOODS.forEach(g => { p[g.key] = 8 + Math.floor(Math.random()*32); });
+  return p;
+}
+
+function initGame(){
+  levelConfig(level);
+  gold=100; cargo={}; trip=1;
+  GOODS.forEach(g=>cargo[g.key]=0);
+  prices = rollPrices();
+  document.getElementById('tripLabel').textContent = trip;
+  document.getElementById('tripTotal').textContent = tripTotal;
+  document.getElementById('goalLabel').textContent = target;
+  document.getElementById('cargoMax').textContent = cargoMax;
+  updateHUD();
+  renderCity();
+}
+
+function cargoTotal(){ return Object.values(cargo).reduce((a,b)=>a+b,0); }
+
+function renderCity(){
+  const cityName = CITIES[(trip-1) % CITIES.length];
+  const card = document.getElementById('cityCard');
+  card.innerHTML = `
+    <div class="city-card">
+      <div class="city-head"><span>📍 ${cityName}</span><span style="color:#9494A6;font-weight:600;">Trip ${trip}</span></div>
+      <div class="goods-row">
+        ${GOODS.map(g => `
+          <div class="good">
+            <div class="icon">${g.icon}</div>
+            <div>${g.name}</div>
+            <div class="price">🪙${prices[g.key]}</div>
+            <button class="buy-btn" data-action="buy" data-key="${g.key}">Buy</button>
+            <button class="sell-btn" data-action="sell" data-key="${g.key}">Sell</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  card.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key, action = btn.dataset.action;
+      if(action==='buy') buyGood(key); else sellGood(key);
+    });
+  });
+}
+
+function renderCargoStrip(){
+  const strip = document.getElementById('cargoStrip');
+  const items = GOODS.filter(g=>cargo[g.key]>0);
+  strip.innerHTML = items.length
+    ? items.map(g => `<div class="cargo-item">${g.icon} x${cargo[g.key]}</div>`).join('')
+    : `<div class="cargo-item" style="opacity:0.5;">Cargo hold empty</div>`;
+}
+
+function buyGood(key){
+  if(!gameActive) return;
+  const price = prices[key];
+  if(gold < price){ toast('Not enough gold'); return; }
+  if(cargoTotal() >= cargoMax){ toast('Cargo hold full'); return; }
+  gold -= price;
+  cargo[key]++;
+  beep(500,0.08,'triangle',0.03);
+  toast(`Bought ${key} for 🪙${price}`);
+  updateHUD();
+  renderCargoStrip();
+}
+
+function sellGood(key){
+  if(!gameActive) return;
+  if(cargo[key] <= 0){ toast('Nothing to sell'); return; }
+  const price = prices[key];
+  gold += price;
+  cargo[key]--;
+  beep(700,0.08,'triangle',0.03);
+  toast(`Sold ${key} for 🪙${price}`);
+  updateHUD();
+  renderCargoStrip();
+  checkWin();
+}
+
+function travelNext(){
+  if(!gameActive) return;
+  if(trip>=tripTotal){ finishGame(); return; }
+  trip++;
+  prices = rollPrices();
+  document.getElementById('tripLabel').textContent = trip;
+  renderCity();
+  beep(400,0.15,'square',0.03);
+  toast('Arrived at new port — prices shifted!');
+  if(trip>=tripTotal){
+    setTimeout(()=>{ if(gameActive) finishGame(); }, 900);
+  }
+}
+
+function updateHUD(){
+  document.getElementById('goldLabel').textContent = gold;
+  document.getElementById('cargoCount').textContent = cargoTotal();
+  document.getElementById('progressFill').style.width = Math.min(100, gold/target*100)+'%';
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1000);
+}
+
+function checkWin(){
+  if(gold>=target && gameActive){
+    gameActive=false;
+    const starCount = trip<=4 ? 3 : trip<=6 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+function finishGame(){
+  if(!gameActive) return;
+  gameActive=false;
+  document.getElementById('finalGold').textContent = gold;
+  document.getElementById('finalGoal').textContent = target;
+  beep(120,0.4,'sawtooth');
+  show('overScreen');
+}
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); initGame(); gameActive=true; renderCargoStrip(); };
+document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; renderCargoStrip(); };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; renderCargoStrip(); };
+document.getElementById('travelBtn').onclick = travelNext;
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('tr_level', level); initGame(); gameActive=true; renderCargoStrip();
+};
+</script>
+</body>
+</html>
