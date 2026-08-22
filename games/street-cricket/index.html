@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Street Cricket — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#0a140a;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#132814,#0a140a 85%);}
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+  .result-toast{position:absolute;top:90px;left:50%;transform:translate(-50%,0);padding:8px 22px;border-radius:20px;font-weight:900;font-size:16px;z-index:6;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .result-toast.show{opacity:1;}
+  .r-good{background:rgba(198,255,61,0.92);color:#0A0A0F;}
+  .r-out{background:rgba(255,61,110,0.92);color:#fff;}
+  .r-miss{background:rgba(148,148,166,0.9);color:#0A0A0F;}
+  .swing-btn{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9cff5c);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#0A0A0F;border:none;box-shadow:0 4px 20px rgba(198,255,61,0.4);z-index:6;}
+  .swing-btn:active{transform:translateX(-50%) scale(0.9);}
+  .overlay{position:absolute;inset:0;background:rgba(4,10,4,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--volt);}
+  .stat span{font-size:11px;color:#9494A6;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div style="display:flex;gap:8px;">
+      <div class="pill">🏏 <b id="runsLabel">0</b></div>
+      <div class="pill">🎯 <b id="ballLabel">1</b>/<b id="ballTotal">10</b></div>
+    </div>
+    <a class="icon-btn" href="../../game.html?id=street-cricket">✕</a>
+  </div>
+  <div class="result-toast" id="resultToast"></div>
+  <button class="swing-btn" id="swingBtn">SWING</button>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">STREET CRICKET</div>
+    <div class="sub">Tap SWING right as the ball reaches the bat. Perfect timing scores sixes, early or late gets you out. 10 balls per innings.</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" id="overTitle">INNINGS OVER</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalRuns">0</b><span>RUNS</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Bat Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=street-cricket" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STREET CRICKET — timing-based tap batting
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  SCALE = Math.min(2.1, Math.max(0.85, Math.min(canvas.width, canvas.height) / 420));
+}
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let state='menu';
+let ball = { progress:0, active:false, speed:0.55, resultShown:false };
+let batX=0, batY=0, bowlerX=0, bowlerY=0;
+let runs=0, ballNum=1, ballTotal=10, best=parseInt(localStorage.getItem('sc_best')||'0');
+let swingFlash=0;
+let lastTick=0;
+
+function resetGame(){
+  runs=0; ballNum=1; ballTotal=10;
+  batX = canvas.width/2; batY = canvas.height*0.78;
+  bowlerX = canvas.width/2; bowlerY = canvas.height*0.18;
+  startBall();
+  updateHUD();
+}
+
+function startBall(){
+  ball = { progress:0, active:true, speed: 0.5 + Math.random()*0.25 + ballNum*0.01, resultShown:false };
+}
+
+function update(dt){
+  if(state!=='playing') return;
+  if(swingFlash>0) swingFlash -= dt;
+  if(ball.active){
+    ball.progress += ball.speed*dt;
+    if(ball.progress >= 1 && !ball.resultShown){
+      ball.resultShown = true;
+      resolveBall(0); // missed entirely (too late, no swing)
+    }
+  }
+  updateHUD();
+}
+
+function swing(){
+  if(state!=='playing' || !ball.active || ball.resultShown) return;
+  swingFlash = 0.15;
+  ball.resultShown = true;
+  const timing = Math.abs(ball.progress - 0.82); // sweet spot near bat
+  resolveBall(timing);
+}
+
+function resolveBall(timingErr){
+  let runsGained = 0, msg='', cls='';
+  if(timingErr < 0.035){ runsGained=6; msg='SIX!'; cls='r-good'; beep(880,0.2,'triangle'); }
+  else if(timingErr < 0.08){ runsGained=4; msg='FOUR!'; cls='r-good'; beep(700,0.15,'triangle'); }
+  else if(timingErr < 0.15){ runsGained=1+Math.floor(Math.random()*2); msg=runsGained+' run'+(runsGained>1?'s':''); cls='r-miss'; beep(500,0.1,'square'); }
+  else { runsGained=-999; msg='OUT!'; cls='r-out'; beep(140,0.3,'sawtooth'); }
+
+  if(runsGained===-999){
+    finishInnings();
+    toast('OUT!','r-out');
+    return;
+  }
+  runs += runsGained;
+  toast(msg, cls);
+  updateHUD();
+  ball.active=false;
+  setTimeout(()=>{
+    ballNum++;
+    if(ballNum>ballTotal){ finishInnings(); }
+    else { startBall(); }
+  }, 700);
+}
+
+function toast(msg, cls){
+  const t=document.getElementById('resultToast');
+  t.textContent=msg; t.className='result-toast show '+cls;
+  setTimeout(()=>t.classList.remove('show'), 700);
+}
+
+function updateHUD(){
+  document.getElementById('runsLabel').textContent = runs;
+  document.getElementById('ballLabel').textContent = Math.min(ballNum,ballTotal);
+  document.getElementById('ballTotal').textContent = ballTotal;
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // pitch
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  ctx.fillRect(canvas.width/2-40*SCALE, 0, 80*SCALE, canvas.height);
+
+  // bowler
+  ctx.fillStyle='#7A5CFF'; ctx.shadowColor='#7A5CFF'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(bowlerX, bowlerY, 16*SCALE, 0, 7); ctx.fill(); ctx.shadowBlur=0;
+
+  // ball
+  if(state==='playing' && ball.active){
+    const y = bowlerY + (batY-bowlerY)*ball.progress;
+    ctx.fillStyle='#fff'; ctx.shadowColor='#FF3D6E'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(canvas.width/2, y, 7*SCALE, 0, 7); ctx.fill(); ctx.shadowBlur=0;
+  }
+
+  // bat/player
+  ctx.save();
+  ctx.translate(batX, batY);
+  if(swingFlash>0) ctx.rotate(-0.6);
+  ctx.fillStyle = swingFlash>0 ? '#C6FF3D' : '#F3F3F7';
+  ctx.shadowColor='#C6FF3D'; ctx.shadowBlur=12;
+  ctx.fillRect(-8*SCALE, -30*SCALE, 16*SCALE, 40*SCALE);
+  ctx.shadowBlur=0;
+  ctx.restore();
+
+  // sweet-spot marker
+  const sweetY = bowlerY + (batY-bowlerY)*0.82;
+  ctx.strokeStyle='rgba(198,255,61,0.25)';
+  ctx.beginPath(); ctx.moveTo(canvas.width/2-40*SCALE, sweetY); ctx.lineTo(canvas.width/2+40*SCALE, sweetY); ctx.stroke();
+}
+
+function loop(ts){
+  if(!lastTick) lastTick=ts;
+  const dt=Math.min(0.05,(ts-lastTick)/1000);
+  lastTick=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('swingBtn').addEventListener('touchstart', e=>{e.preventDefault(); swing();}, {passive:false});
+document.getElementById('swingBtn').addEventListener('click', swing);
+addEventListener('keydown', e=>{ if(e.key===' ') swing(); });
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function finishInnings(){
+  state='over';
+  if(runs>best){ best=runs; localStorage.setItem('sc_best', best); }
+  document.getElementById('overTitle').textContent = runs>=30 ? 'GREAT KNOCK!' : 'INNINGS OVER';
+  document.getElementById('finalRuns').textContent = runs;
+  document.getElementById('finalBest').textContent = best;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

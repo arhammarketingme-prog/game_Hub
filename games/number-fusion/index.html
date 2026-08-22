@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Fusion — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#0d0f17;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#1a1e2e,#0d0f17 70%);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;}
+  .pill b{color:var(--volt);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+  .goalbar{padding:0 16px 10px;font-size:12px;color:#9494A6;text-align:center;}
+  .goalbar b{color:#fff;}
+  #boardWrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:10px; }
+  #board{ position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:min(90vw,360px); aspect-ratio:1; background:rgba(255,255,255,0.05); border-radius:14px; padding:8px; }
+  .slot{ background:rgba(255,255,255,0.04); border-radius:8px; aspect-ratio:1; }
+  .tile{
+    position:absolute; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-family:monospace; transition:left .1s ease, top .1s ease, transform .1s ease;
+  }
+  .bottom{padding:12px 16px 20px; text-align:center;}
+  .btnrow{display:flex; gap:10px;}
+  .btn{flex:1;padding:12px;border-radius:9px;font-weight:800;font-size:13px;border:none;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);}
+  .overlay{position:absolute;inset:0;background:rgba(6,7,12,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:270px;line-height:1.5;}
+  .stars{font-size:32px;margin-bottom:16px;letter-spacing:6px;}
+  .star-dim{opacity:0.25;}
+</style>
+</head>
+<body>
+<div id="app">
+  <a href="../../game.html?id=number-fusion" style="position:fixed;top:14px;right:14px;z-index:999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;">✕</a>
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=number-fusion">←</a>
+    <div class="pill">🔢 Level <b id="lvlLabel">1</b></div>
+    <div class="pill">⭐ <b id="scoreLabel">0</b></div>
+    <span style="width:34px;"></span>
+  </div>
+  <div class="goalbar">Reach the <b id="goalLabel">128</b> tile to clear this level</div>
+
+  <div id="boardWrap"><div id="board"></div></div>
+
+  <div class="bottom">
+    <div class="btnrow">
+      <button class="btn btn-ghost" id="restartBtn">⟲ Restart</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">NUMBER FUSION</div>
+    <div class="sub">Swipe to slide all tiles. Matching numbers merge into their sum. Reach the target tile to clear the level.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="winScreen">
+    <div class="title">FUSED!</div>
+    <div class="stars" id="starsDisplay">★★★</div>
+    <div class="sub">Level <span id="wonLvl">1</span> complete.</div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="nextBtn">▶ Next Level</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=number-fusion">🎮 Back to GameHub</a>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">BOARD FULL</div>
+    <div class="sub">No more moves left. Score: <span id="finalScore">0</span></div>
+    <button class="btn btn-primary" style="min-width:220px;margin-bottom:10px;" id="retryBtn">⟲ Try Again</button>
+    <a class="btn btn-ghost" style="min-width:220px;display:block;text-decoration:none;" href="../../game.html?id=number-fusion">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   NUMBER FUSION — 2048-style tile merge
+   ============================================================ */
+const SIZE = 4;
+let level = parseInt(localStorage.getItem('nf_level')||'1');
+let grid = [], score = 0, target = 128, gameActive = false, tileId = 0;
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+const TILE_COLORS = {2:'#3a3a4a',4:'#4a4560',8:'#5a4a80',16:'#6a4aa0',32:'#7A5CFF',64:'#a05cff',128:'#C6FF3D',256:'#9cff5c',512:'#ffd65c',1024:'#ff9838',2048:'#FF3D6E'};
+
+function levelConfig(lvl){
+  target = 64 * Math.pow(2, Math.min(5, Math.floor(lvl/2)));
+}
+
+function emptyGrid(){
+  return Array.from({length:SIZE}, () => Array(SIZE).fill(null));
+}
+
+function initGame(){
+  levelConfig(level);
+  grid = emptyGrid();
+  score = 0; tileId = 0;
+  document.getElementById('lvlLabel').textContent = level;
+  document.getElementById('goalLabel').textContent = target;
+  document.getElementById('scoreLabel').textContent = score;
+  spawnTile(); spawnTile();
+  renderBoard();
+}
+
+function spawnTile(){
+  const empties = [];
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(!grid[r][c]) empties.push([r,c]);
+  if(!empties.length) return false;
+  const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+  grid[r][c] = { value: Math.random()<0.85?2:4, id: tileId++ };
+  return true;
+}
+
+function renderBoard(){
+  const boardEl = document.getElementById('board');
+  boardEl.querySelectorAll('.slot').forEach(s=>s.remove());
+  boardEl.querySelectorAll('.tile').forEach(s=>s.remove());
+  for(let i=0;i<SIZE*SIZE;i++){
+    const s = document.createElement('div'); s.className='slot';
+    boardEl.appendChild(s);
+  }
+  const rect = boardEl.getBoundingClientRect();
+  const cellSize = (rect.width - 8*2 - 8*3) / SIZE;
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const t = grid[r][c];
+      if(!t) continue;
+      const el = document.createElement('div');
+      el.className='tile';
+      el.style.width = cellSize+'px';
+      el.style.height = cellSize+'px';
+      el.style.left = (8 + c*(cellSize+8))+'px';
+      el.style.top = (8 + r*(cellSize+8))+'px';
+      el.style.background = TILE_COLORS[t.value] || '#FF3D6E';
+      el.style.color = t.value <= 4 ? '#9494A6' : '#0A0A0F';
+      el.style.fontSize = Math.max(12, cellSize*0.36)+'px';
+      el.textContent = t.value;
+      boardEl.appendChild(el);
+    }
+  }
+}
+
+function slide(row){
+  const filtered = row.filter(Boolean);
+  const merged = [];
+  let gained = 0;
+  for(let i=0;i<filtered.length;i++){
+    if(i<filtered.length-1 && filtered[i].value===filtered[i+1].value){
+      const val = filtered[i].value*2;
+      merged.push({ value: val, id: tileId++ });
+      gained += val;
+      if(val>=target) setTimeout(checkWin, 50);
+      i++;
+    } else {
+      merged.push(filtered[i]);
+    }
+  }
+  while(merged.length<SIZE) merged.push(null);
+  return { row: merged, gained };
+}
+
+function move(dir){
+  if(!gameActive) return;
+  let moved = false;
+  let totalGain = 0;
+  const newGrid = emptyGrid();
+
+  if(dir==='left' || dir==='right'){
+    for(let r=0;r<SIZE;r++){
+      let row = grid[r].slice();
+      if(dir==='right') row = row.reverse();
+      const { row: newRow, gained } = slide(row);
+      totalGain += gained;
+      const finalRow = dir==='right' ? newRow.reverse() : newRow;
+      newGrid[r] = finalRow;
+      if(JSON.stringify(finalRow.map(t=>t?t.value:0)) !== JSON.stringify(grid[r].map(t=>t?t.value:0))) moved = true;
+    }
+  } else {
+    for(let c=0;c<SIZE;c++){
+      let col = grid.map(r=>r[c]);
+      if(dir==='down') col = col.reverse();
+      const { row: newCol, gained } = slide(col);
+      totalGain += gained;
+      const finalCol = dir==='down' ? newCol.reverse() : newCol;
+      for(let r=0;r<SIZE;r++){
+        if((grid[r][c]?grid[r][c].value:0) !== (finalCol[r]?finalCol[r].value:0)) moved = true;
+        newGrid[r][c] = finalCol[r];
+      }
+    }
+  }
+
+  if(moved){
+    grid = newGrid;
+    score += totalGain;
+    document.getElementById('scoreLabel').textContent = score;
+    spawnTile();
+    renderBoard();
+    beep(400,0.06,'triangle',0.03);
+    checkGameOver();
+  }
+}
+
+function checkWin(){
+  let hasTarget = false;
+  grid.forEach(row=>row.forEach(t=>{ if(t && t.value>=target) hasTarget=true; }));
+  if(hasTarget && gameActive){
+    gameActive=false;
+    const starCount = score > target*3 ? 3 : score > target*1.5 ? 2 : 1;
+    document.getElementById('starsDisplay').innerHTML =
+      Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
+    document.getElementById('wonLvl').textContent = level;
+    beep(660,0.15,'triangle'); setTimeout(()=>beep(880,0.2,'triangle'),150);
+    show('winScreen');
+  }
+}
+
+function checkGameOver(){
+  const hasEmpty = grid.some(row=>row.some(t=>!t));
+  if(hasEmpty) return;
+  let canMerge = false;
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const v = grid[r][c].value;
+      if(c<SIZE-1 && grid[r][c+1].value===v) canMerge=true;
+      if(r<SIZE-1 && grid[r+1][c].value===v) canMerge=true;
+    }
+  }
+  if(!canMerge && gameActive){
+    gameActive=false;
+    document.getElementById('finalScore').textContent = score;
+    beep(120,0.4,'sawtooth');
+    show('overScreen');
+  }
+}
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); initGame(); gameActive=true; };
+document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; };
+document.getElementById('nextBtn').onclick = () => {
+  hide('winScreen'); level++; localStorage.setItem('nf_level', level); initGame(); gameActive=true;
+};
+
+addEventListener('keydown', e => {
+  const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+  if(map[e.key]){ e.preventDefault(); move(map[e.key]); }
+});
+
+let touchStart=null;
+document.getElementById('board').addEventListener('touchstart', e=>{
+  touchStart = { x:e.touches[0].clientX, y:e.touches[0].clientY };
+}, {passive:true});
+document.getElementById('board').addEventListener('touchend', e=>{
+  if(!touchStart) return;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
+  if(Math.max(Math.abs(dx),Math.abs(dy)) > 20){
+    if(Math.abs(dx)>Math.abs(dy)) move(dx>0?'right':'left');
+    else move(dy>0?'down':'up');
+  }
+  touchStart = null;
+}, {passive:true});
+
+addEventListener('resize', renderBoard);
+</script>
+</body>
+</html>

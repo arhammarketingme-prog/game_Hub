@@ -337,5 +337,10 @@ values
   ('robo-arena', 'Robo Arena', 'Tap to strike. Survive every wave.', 'action', true, 'games/robo-arena/index.html', 'new', 4.5, 13, 510, 'published', false),
   ('street-drift-x', 'Street Drift X', 'Hold to drift, chain the multiplier.', 'racing', true, 'games/street-drift-x/index.html', 'hot', 4.6, 12, 470, 'published', false),
   ('cafe-rush', 'Cafe Rush', 'Serve every order before patience runs out.', 'strategy', true, 'games/cafe-rush/index.html', 'new', 4.3, 10, 380, 'published', false),
-  ('penalty-clash', 'Penalty Clash', 'Aim the corners, beat the keeper.', 'sports', true, 'games/penalty-clash/index.html', 'new', 4.4, 9, 350, 'published', false)
+  ('penalty-clash', 'Penalty Clash', 'Aim the corners, beat the keeper.', 'sports', true, 'games/penalty-clash/index.html', 'new', 4.4, 9, 350, 'published', false),
+  ('number-fusion', 'Number Fusion', 'Swipe to merge, chase the target tile.', 'puzzle', true, 'games/number-fusion/index.html', 'hot', 4.6, 10, 410, 'published', false),
+  ('street-cricket', 'Street Cricket', 'Time your swing. Sixes need precision.', 'sports', true, 'games/street-cricket/index.html', 'new', 4.3, 7, 290, 'published', false),
+  ('sky-track', 'Sky Track', 'Floating lanes, real gaps, no second chances.', 'racing', true, 'games/sky-track/index.html', 'new', 4.4, 7, 260, 'published', false),
+  ('city-builder-mini', 'City Builder Mini', 'Zone, build, grow your population.', 'strategy', true, 'games/city-builder-mini/index.html', 'new', 4.3, 8, 310, 'published', false),
+  ('monster-rush', 'Monster Rush', 'Survive the swarm, grab the upgrades.', 'action', true, 'games/monster-rush/index.html', 'hot', 4.5, 11, 440, 'published', false)
 on conflict (slug) do nothing;
