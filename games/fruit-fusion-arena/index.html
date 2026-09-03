@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Fruit Fusion Arena — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#0d0817;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,#1a1228,#0d0817 85%);}
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:12px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--gold);font-family:monospace;font-size:14px;}
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+  .next-preview{position:absolute;top:70px;right:16px;z-index:5;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;}
+  .next-label{font-size:9px;color:#9494A6;font-weight:700;letter-spacing:1px;}
+  .next-circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(255,255,255,0.2);}
+  .combo-toast{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);font-weight:900;font-size:38px;z-index:8;opacity:0;transition:all .25s cubic-bezier(.34,1.56,.64,1);pointer-events:none;text-shadow:0 0 20px currentColor;}
+  .combo-toast.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  .overlay{position:absolute;inset:0;background:rgba(6,4,10,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--gold),var(--hot));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--gold);}
+  .stat span{font-size:11px;color:#9494A6;}
+  .chain-list{display:flex;gap:6px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;max-width:280px;}
+  .chain-dot{width:20px;height:20px;border-radius:50%;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div style="display:flex;gap:8px;">
+      <div class="pill">🍉 <b id="scoreLabel">0</b></div>
+      <div class="pill">🏆 <b id="bestLabel">0</b></div>
+    </div>
+    <a class="icon-btn" href="../../game.html?id=fruit-fusion-arena">✕</a>
+  </div>
+  <div class="next-preview">
+    <div class="next-label">NEXT</div>
+    <div class="next-circle" id="nextCircle"></div>
+  </div>
+  <div class="combo-toast" id="comboToast">FUSION!</div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">FRUIT FUSION ARENA</div>
+    <div class="sub">Drop the fruit — tap or drag to aim, release to drop. Two of the same fruit touch and fuse into the next size up. Don't let the pile cross the top line!</div>
+    <button class="btn btn-primary" id="startBtn">▶ Play Now</button>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">ARENA FULL</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+      <div class="stat"><b id="finalMax">🍒</b><span>BIGGEST FUSION</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Fuse Again</button>
+    <a class="btn btn-ghost" href="../../game.html?id=fruit-fusion-arena" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FRUIT FUSION ARENA — Suika-style physics drop-merge game
+   Custom lightweight circle-physics engine (no external deps)
+   ============================================================ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  SCALE = Math.min(2.1, Math.max(0.85, Math.min(canvas.width, canvas.height) / 420));
+}
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='sine',vol=0.06){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function popSound(tier){
+  const freq = 300 + tier*70;
+  beep(freq, 0.12, 'sine', 0.08);
+  setTimeout(()=>beep(freq*1.5, 0.1, 'triangle', 0.05), 40);
+}
+
+// Fruit tiers: radius (base units, scaled), color, emoji-ish label via color+size, score value
+const TIERS = [
+  { r:14, color:'#FF3D6E', name:'Cherry',     points:1  },
+  { r:19, color:'#FF7A5C', name:'Strawberry', points:3  },
+  { r:25, color:'#FFD65C', name:'Lemon',      points:6  },
+  { r:32, color:'#FFA53D', name:'Orange',     points:10 },
+  { r:40, color:'#C6FF3D', name:'Apple',      points:15 },
+  { r:49, color:'#5CFF8F', name:'Pear',       points:22 },
+  { r:59, color:'#3DD9FF', name:'Peach',      points:30 },
+  { r:70, color:'#7A5CFF', name:'Pineapple',  points:40 },
+  { r:82, color:'#B85CFF', name:'Melon',      points:55 },
+  { r:96, color:'#FF5CA8', name:'Watermelon', points:75 },
+];
+
+let state = 'menu';
+let fruits = [];
+let dropX = 0, currentTier = 0, nextTier = 0;
+let score = 0, best = parseInt(localStorage.getItem('ffa_best')||'0');
+let maxTierReached = 0;
+let wallLeft=0, wallRight=0, floorY=0, topLine=0;
+let canDrop = true, dropCooldown = 0;
+let dangerTimer = 0;
+let shakeTime = 0, shakeMag = 0;
+let particles = [];
+let lastTick = 0;
+let fruitIdCounter = 0;
+
+function resetGame(){
+  fruits = []; score = 0; maxTierReached = 0;
+  wallLeft = canvas.width*0.08; wallRight = canvas.width*0.92;
+  floorY = canvas.height*0.94; topLine = canvas.height*0.16;
+  dropX = canvas.width/2;
+  currentTier = Math.floor(Math.random()*4);
+  nextTier = Math.floor(Math.random()*4);
+  canDrop = true; dropCooldown = 0; dangerTimer = 0;
+  particles = [];
+  updateHUD();
+  updateNextPreview();
+}
+
+function updateNextPreview(){
+  const el = document.getElementById('nextCircle');
+  const t = TIERS[nextTier];
+  el.style.background = t.color;
+  el.style.width = el.style.height = Math.max(20, t.r*0.55)+'px';
+}
+
+function spawnFruit(x, tier){
+  fruits.push({
+    id: fruitIdCounter++,
+    x, y: topLine - 20,
+    vx: 0, vy: 0,
+    r: TIERS[tier].r * SCALE,
+    tier,
+    settled: false,
+    justMerged: 0,
+  });
+}
+
+function dropCurrent(){
+  if(!canDrop || state!=='playing') return;
+  canDrop = false;
+  dropCooldown = 0.4;
+  spawnFruit(dropX, currentTier);
+  beep(200 + currentTier*15, 0.08, 'square', 0.04);
+  currentTier = nextTier;
+  nextTier = Math.floor(Math.random()*Math.min(5, 4+Math.floor(score/200)));
+  updateNextPreview();
+}
+
+function spawnParticles(x, y, color, count=14){
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2, sp = 1.5+Math.random()*4;
+    particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:26, maxLife:26, color, r: 2+Math.random()*3 });
+  }
+}
+
+function triggerShake(mag){ shakeTime = 0.2; shakeMag = mag; }
+
+function showComboToast(tierName, tierColor){
+  const t = document.getElementById('comboToast');
+  t.textContent = tierName + '!';
+  t.style.color = tierColor;
+  t.classList.remove('show');
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 500);
+}
+
+function physicsStep(dt){
+  const GRAVITY = 900 * SCALE;
+  const DAMPING = 0.985;
+  const substeps = 2;
+  const sdt = dt/substeps;
+
+  for(let s=0; s<substeps; s++){
+    fruits.forEach(f => {
+      f.vy += GRAVITY*sdt;
+      f.x += f.vx*sdt;
+      f.y += f.vy*sdt;
+      f.vx *= DAMPING;
+
+      if(f.x - f.r < wallLeft){ f.x = wallLeft + f.r; f.vx *= -0.35; }
+      if(f.x + f.r > wallRight){ f.x = wallRight - f.r; f.vx *= -0.35; }
+      if(f.y + f.r > floorY){ f.y = floorY - f.r; f.vy *= -0.25; if(Math.abs(f.vy)<20) f.vy=0; }
+    });
+
+    // collision resolution + merge detection
+    const toMerge = [];
+    for(let i=0;i<fruits.length;i++){
+      for(let j=i+1;j<fruits.length;j++){
+        const a = fruits[i], b = fruits[j];
+        const dx = b.x-a.x, dy = b.y-a.y;
+        const dist = Math.hypot(dx,dy);
+        const minDist = a.r+b.r;
+        if(dist < minDist && dist > 0.001){
+          if(a.tier === b.tier && a.tier < TIERS.length-1 && !a.merging && !b.merging){
+            toMerge.push([a,b]);
+            a.merging = true; b.merging = true;
+            continue;
+          }
+          const overlap = minDist - dist;
+          const nx = dx/dist, ny = dy/dist;
+          const push = overlap/2;
+          a.x -= nx*push; a.y -= ny*push;
+          b.x += nx*push; b.y += ny*push;
+          const relVx = b.vx-a.vx, relVy = b.vy-a.vy;
+          const relSpeed = relVx*nx + relVy*ny;
+          if(relSpeed < 0){
+            const impulse = -relSpeed*0.5;
+            a.vx -= nx*impulse; a.vy -= ny*impulse;
+            b.vx += nx*impulse; b.vy += ny*impulse;
+          }
+        }
+      }
+    }
+
+    toMerge.forEach(([a,b]) => {
+      const newTier = a.tier+1;
+      const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      fruits = fruits.filter(f => f !== a && f !== b);
+      const newFruit = { id: fruitIdCounter++, x:mx, y:my, vx:0, vy:-80, r: TIERS[newTier].r*SCALE, tier:newTier, settled:false, justMerged: 14 };
+      fruits.push(newFruit);
+      score += TIERS[newTier].points;
+      if(newTier > maxTierReached) maxTierReached = newTier;
+      spawnParticles(mx, my, TIERS[newTier].color, 16 + newTier*2);
+      triggerShake(2 + newTier*0.6);
+      popSound(newTier);
+      if(newTier >= 5) showComboToast(TIERS[newTier].name, TIERS[newTier].color);
+      updateHUD();
+    });
+  }
+
+  fruits.forEach(f => { if(f.justMerged>0) f.justMerged--; f.merging=false; });
+
+  particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; p.life--; });
+  particles = particles.filter(p => p.life>0);
+
+  if(dropCooldown>0){ dropCooldown -= dt; if(dropCooldown<=0) canDrop = true; }
+  if(shakeTime>0) shakeTime -= dt;
+
+  // danger check: any settled-ish fruit above topLine for sustained time
+  const overLine = fruits.some(f => f.y - f.r < topLine && Math.abs(f.vy) < 30);
+  if(overLine){
+    dangerTimer += dt;
+    if(dangerTimer > 1.5){ gameOver(); }
+  } else {
+    dangerTimer = Math.max(0, dangerTimer - dt*2);
+  }
+}
+
+function updateHUD(){
+  document.getElementById('scoreLabel').textContent = score;
+  document.getElementById('bestLabel').textContent = Math.max(best, score);
+}
+
+function draw(){
+  ctx.save();
+  if(shakeTime>0){
+    const m = shakeMag*(shakeTime/0.2);
+    ctx.translate((Math.random()-0.5)*m*4, (Math.random()-0.5)*m*4);
+  }
+  ctx.clearRect(-20,-20,canvas.width+40,canvas.height+40);
+
+  // arena walls
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 4*SCALE;
+  ctx.beginPath();
+  ctx.moveTo(wallLeft, topLine-30);
+  ctx.lineTo(wallLeft, floorY);
+  ctx.lineTo(wallRight, floorY);
+  ctx.lineTo(wallRight, topLine-30);
+  ctx.stroke();
+
+  // danger line
+  const dangerAlpha = 0.15 + (dangerTimer/1.5)*0.5;
+  ctx.strokeStyle = `rgba(255,61,110,${dangerAlpha})`;
+  ctx.setLineDash([8,6]);
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(wallLeft, topLine); ctx.lineTo(wallRight, topLine); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // particles (behind fruits)
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life/p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*SCALE, 0, 7); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // fruits
+  fruits.forEach(f => {
+    const t = TIERS[f.tier];
+    const popScale = f.justMerged>0 ? 1 + (f.justMerged/14)*0.3 : 1;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.scale(popScale, popScale);
+    ctx.fillStyle = t.color;
+    ctx.shadowColor = t.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(0,0,f.r,0,7); ctx.fill();
+    ctx.shadowBlur = 0;
+    // inner highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(-f.r*0.3,-f.r*0.3,f.r*0.35,0,7); ctx.fill();
+    // face dot (cute touch, cheap to draw)
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.arc(-f.r*0.25,f.r*0.05,f.r*0.09,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(f.r*0.25,f.r*0.05,f.r*0.09,0,7); ctx.fill();
+    ctx.restore();
+  });
+
+  // drop preview
+  if(state==='playing' && canDrop){
+    const t = TIERS[currentTier];
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = t.color;
+    ctx.shadowColor = t.color; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(dropX, topLine-30, t.r*SCALE, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.setLineDash([4,6]);
+    ctx.beginPath(); ctx.moveTo(dropX, topLine-30); ctx.lineTo(dropX, floorY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+function loop(ts){
+  if(!lastTick) lastTick = ts;
+  const dt = Math.min(0.032, (ts-lastTick)/1000);
+  lastTick = ts;
+  if(state==='playing') physicsStep(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function getX(e){
+  const r = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return t.clientX - r.left;
+}
+
+canvas.addEventListener('touchstart', e=>{
+  if(state!=='playing') return;
+  e.preventDefault();
+  dropX = Math.max(wallLeft+TIERS[currentTier].r*SCALE, Math.min(wallRight-TIERS[currentTier].r*SCALE, getX(e)));
+}, {passive:false});
+canvas.addEventListener('touchmove', e=>{
+  if(state!=='playing') return;
+  e.preventDefault();
+  dropX = Math.max(wallLeft+TIERS[currentTier].r*SCALE, Math.min(wallRight-TIERS[currentTier].r*SCALE, getX(e)));
+}, {passive:false});
+canvas.addEventListener('touchend', e=>{
+  if(state!=='playing') return;
+  dropCurrent();
+}, {passive:true});
+
+canvas.addEventListener('mousemove', e=>{
+  if(state!=='playing') return;
+  dropX = Math.max(wallLeft+TIERS[currentTier].r*SCALE, Math.min(wallRight-TIERS[currentTier].r*SCALE, getX(e)));
+});
+canvas.addEventListener('click', e=>{ if(state==='playing') dropCurrent(); });
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => { hide('startScreen'); resetGame(); state='playing'; };
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
+
+function gameOver(){
+  if(state!=='playing') return;
+  state='over';
+  beep(140,0.4,'sawtooth',0.06);
+  if(score>best){ best=score; localStorage.setItem('ffa_best', best); }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = best;
+  document.getElementById('finalMax').textContent = TIERS[maxTierReached].name;
+  document.getElementById('finalMax').style.color = TIERS[maxTierReached].color;
+  show('overScreen');
+}
+</script>
+</body>
+</html>

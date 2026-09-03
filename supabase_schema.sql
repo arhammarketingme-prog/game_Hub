@@ -347,5 +347,6 @@ values
   ('turbo-drift-arena', 'Turbo Drift Arena', 'Hold to drift, chase the combo.', 'racing', true, 'games/turbo-drift-arena/index.html', 'hot', 4.5, 10, 380, 'published', false),
   ('zombie-siege', 'Zombie Siege', 'Defend your base, wave after wave.', 'action', true, 'games/zombie-siege/index.html', 'new', 4.4, 8, 330, 'published', false),
   ('gem-swap', 'Gem Swap', 'Match, chain, and clear the board.', 'puzzle', true, 'games/gem-swap/index.html', 'hot', 4.6, 11, 420, 'published', false),
-  ('trade-route', 'Trade Route', 'Buy low, sail far, sell high.', 'strategy', true, 'games/trade-route/index.html', 'new', 4.3, 6, 250, 'published', false)
+  ('trade-route', 'Trade Route', 'Buy low, sail far, sell high.', 'strategy', true, 'games/trade-route/index.html', 'new', 4.3, 6, 250, 'published', false),
+  ('fruit-fusion-arena', 'Fruit Fusion Arena', 'Drop, fuse, chase the watermelon.', 'puzzle', true, 'games/fruit-fusion-arena/index.html', 'hot', 4.8, 13, 510, 'published', false)
 on conflict (slug) do nothing;

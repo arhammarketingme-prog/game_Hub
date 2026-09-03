@@ -166,7 +166,8 @@ const GAMEHUB_CATALOG = [
   { id:"turbo-drift-arena", name:"Turbo Drift Arena", tagline:"Hold to drift, chase the combo.", category:"racing", categoryLabel:"Racing", developer:"GameHub Studio", badge:"hot", rating:4.5, plays:"380", icon:"🏎️", accent:"linear-gradient(135deg,#181822,#0a0a10)", path:"games/turbo-drift-arena/index.html", original:true },
   { id:"zombie-siege", name:"Zombie Siege", tagline:"Defend your base, wave after wave.", category:"action", categoryLabel:"Action", developer:"GameHub Studio", badge:"new", rating:4.4, plays:"330", icon:"🧟", accent:"linear-gradient(135deg,#181c10,#0c0d0a)", path:"games/zombie-siege/index.html", original:true },
   { id:"gem-swap", name:"Gem Swap", tagline:"Match, chain, and clear the board.", category:"puzzle", categoryLabel:"Puzzle", developer:"GameHub Studio", badge:"hot", rating:4.6, plays:"420", icon:"💎", accent:"linear-gradient(135deg,#1e142e,#0d0a17)", path:"games/gem-swap/index.html", original:true },
-  { id:"trade-route", name:"Trade Route", tagline:"Buy low, sail far, sell high.", category:"strategy", categoryLabel:"Strategy", developer:"GameHub Studio", badge:"new", rating:4.3, plays:"250", icon:"🗺️", accent:"linear-gradient(135deg,#241a10,#120d08)", path:"games/trade-route/index.html", original:true }
+  { id:"trade-route", name:"Trade Route", tagline:"Buy low, sail far, sell high.", category:"strategy", categoryLabel:"Strategy", developer:"GameHub Studio", badge:"new", rating:4.3, plays:"250", icon:"🗺️", accent:"linear-gradient(135deg,#241a10,#120d08)", path:"games/trade-route/index.html", original:true },
+  { id:"fruit-fusion-arena", name:"Fruit Fusion Arena", tagline:"Drop, fuse, chase the watermelon.", category:"puzzle", categoryLabel:"Puzzle", developer:"GameHub Studio", badge:"hot", rating:4.8, plays:"510", icon:"🍉", accent:"linear-gradient(135deg,#1a1228,#0d0817)", path:"games/fruit-fusion-arena/index.html", original:true }
 ];
 
 const GAMEHUB_CATEGORIES = [
