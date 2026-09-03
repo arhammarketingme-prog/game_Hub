@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Merge Legion — GameHub</title>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; --cyan:#3DD9FF; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;background:#0d0a17;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;color:#F3F3F7;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 0%,#1e142e,#0d0a17 70%);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:6px;}
+  .pill{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:11.5px;font-weight:700;display:flex;gap:5px;align-items:center;}
+  .pill b{color:var(--gold);font-family:monospace;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;text-decoration:none;}
+
+  .arena{ position:relative; margin:0 14px 10px; height:150px; background:rgba(255,255,255,0.04); border-radius:14px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; }
+  .wave-tag{position:absolute;top:8px;left:10px;font-size:11px;font-weight:800;color:#9494A6;z-index:2;}
+  .power-tag{position:absolute;top:8px;right:10px;font-size:11px;font-weight:800;color:var(--cyan);z-index:2;}
+  .enemy-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;}
+  .enemy-icon{font-size:44px;filter:drop-shadow(0 0 10px rgba(255,61,110,0.5));transition:transform .1s;}
+  .enemy-hpbar{width:160px;height:10px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);}
+  .enemy-hpfill{height:100%;background:linear-gradient(90deg,#FF3D6E,#ff8a5c);width:100%;transition:width .15s;}
+  .enemy-name{font-size:11px;color:#9494A6;font-weight:700;}
+  .float-text{position:absolute;font-weight:900;font-size:14px;pointer-events:none;animation:floatUp 0.9s ease-out forwards;z-index:5;}
+  @keyframes floatUp{ 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-50px);} }
+
+  .grid-section{ flex:1; display:flex; flex-direction:column; padding:0 14px; min-height:0; }
+  .grid-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .grid-head span{ font-size:11.5px; color:#9494A6; font-weight:700; }
+  #grid{ display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(3,1fr); gap:8px; flex:1; min-height:0; }
+  .slot{ background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; display:flex; align-items:center; justify-content:center; position:relative; aspect-ratio:1; }
+  .slot.empty::after{ content:'+'; color:rgba(255,255,255,0.15); font-size:22px; }
+  .unit{ width:82%; height:82%; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; position:relative; transition:transform .15s; }
+  .unit.selected{ transform:scale(1.1); box-shadow:0 0 0 2px #fff; }
+  .unit .icon{ font-size:22px; }
+  .unit .tier{ font-size:10px; font-family:monospace; margin-top:1px; opacity:0.85; }
+
+  .bottom{ padding:10px 14px 18px; }
+  .summon-btn{ width:100%; padding:14px; border-radius:10px; border:none; font-weight:800; font-size:14px; background:var(--volt); color:#0A0A0F; display:flex; justify-content:center; align-items:center; gap:8px; }
+  .summon-btn:disabled{ opacity:0.4; }
+  .prestige-btn{ width:100%; margin-top:8px; padding:10px; border-radius:9px; border:1px solid rgba(122,92,255,0.4); background:rgba(122,92,255,0.12); color:var(--violet); font-weight:800; font-size:12px; }
+
+  .overlay{position:absolute;inset:0;background:rgba(6,4,10,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:26px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,var(--volt),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:24px;max-width:280px;line-height:1.5;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .welcome-gold{font-size:34px;font-weight:900;color:var(--gold);margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <a href="../../game.html?id=merge-legion" style="position:fixed;top:12px;right:14px;z-index:999;width:34px;height:34px;border-radius:50%;background:rgba(20,20,31,0.78);border:1px solid rgba(255,255,255,0.15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;">✕</a>
+
+  <div class="topbar">
+    <a class="icon-btn" href="../../game.html?id=merge-legion">←</a>
+    <div class="pill">🪙 <b id="goldLabel">0</b></div>
+    <div class="pill">⭐ Rank <b id="rankLabel">1</b></div>
+    <span style="width:34px;"></span>
+  </div>
+
+  <div class="arena" id="arena">
+    <div class="wave-tag">WAVE <span id="waveLabel">1</span></div>
+    <div class="power-tag">⚔️ <span id="powerLabel">0</span> DPS</div>
+    <div class="enemy-wrap">
+      <div class="enemy-icon" id="enemyIcon">👹</div>
+      <div class="enemy-hpbar"><div class="enemy-hpfill" id="enemyHpFill"></div></div>
+      <div class="enemy-name" id="enemyName">Grunt</div>
+    </div>
+  </div>
+
+  <div class="grid-section">
+    <div class="grid-head">
+      <span>YOUR LEGION</span>
+      <span id="idleRateLabel">+0 🪙/s idle</span>
+    </div>
+    <div id="grid"></div>
+  </div>
+
+  <div class="bottom">
+    <button class="summon-btn" id="summonBtn">➕ Summon Unit — <span id="summonCost">10</span> 🪙</button>
+    <button class="prestige-btn hidden" id="prestigeBtn">🌟 Reset Legion for permanent +10% power</button>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">MERGE LEGION</div>
+    <div class="sub">Summon units into your grid. Tap two of the same tier to merge them into something stronger. Your legion auto-battles — even while you're away, gold keeps trickling in.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="startBtn">▶ Play Now</button>
+  </div>
+
+  <div class="overlay hidden" id="welcomeBackScreen">
+    <div class="title" style="font-size:22px;">WELCOME BACK</div>
+    <div class="welcome-gold">+<span id="offlineGold">0</span> 🪙</div>
+    <div class="sub">Your legion kept fighting while you were away.</div>
+    <button class="btn btn-primary" style="min-width:220px;" id="collectBtn">Collect & Continue</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   MERGE LEGION — idle merge-combat hybrid
+   ============================================================ */
+const SAVE_KEY = 'ml_save_v1';
+const ROWS = 3, COLS = 4;
+const UNIT_ICONS = ['🗡️','⚔️','🛡️','🏹','🔱','⚡','🔥','👑'];
+const UNIT_COLORS = ['#3a3a4a','#4a4560','#5a4a80','#6a4aa0','#7A5CFF','#a05cff','#C6FF3D','#FFD65C'];
+
+let gold = 0, rank = 1, wave = 1, prestigeMult = 1;
+let grid = Array(ROWS*COLS).fill(null);
+let selectedIdx = null;
+let summonCount = 0;
+let enemy = null;
+let gameActive = false;
+let lastTick = 0;
+let lastSaveTime = Date.now();
+
+let audioCtx=null;
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function tierPower(tier){ return Math.round(Math.pow(1.9, tier) * 3); }
+function tierIdleRate(tier){ return Math.pow(1.6, tier) * 0.4; }
+function summonCost(){ return Math.round(10 * Math.pow(1.16, summonCount)); }
+
+function makeEnemy(waveNum){
+  const isBoss = waveNum % 5 === 0;
+  const baseHp = 30 * Math.pow(1.22, waveNum-1);
+  const hp = isBoss ? baseHp * 4 : baseHp;
+  const reward = Math.round((isBoss ? 12 : 4) * Math.pow(1.16, waveNum-1));
+  return {
+    hp, maxHp: hp, reward,
+    icon: isBoss ? '👺' : (waveNum % 3 === 0 ? '🧟' : '👹'),
+    name: isBoss ? 'Boss Brute' : (waveNum % 3 === 0 ? 'Zombie' : 'Grunt'),
+    isBoss
+  };
+}
+
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    gold = data.gold||0; rank = data.rank||1; wave = data.wave||1;
+    prestigeMult = data.prestigeMult||1; summonCount = data.summonCount||0;
+    grid = data.grid || Array(ROWS*COLS).fill(null);
+    const lastActive = data.lastActive || Date.now();
+    const elapsedSec = Math.min(4*3600, Math.max(0, (Date.now()-lastActive)/1000));
+    const idleRate = calcIdleRate();
+    const earned = Math.round(elapsedSec * idleRate);
+    if(earned > 5){
+      gold += earned;
+      document.getElementById('offlineGold').textContent = earned;
+      return 'welcome';
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+function saveGame(){
+  localStorage.setItem(SAVE_KEY, JSON.stringify({
+    gold, rank, wave, prestigeMult, summonCount, grid, lastActive: Date.now()
+  }));
+}
+
+function calcTotalPower(){
+  let p = 0;
+  grid.forEach(u => { if(u) p += tierPower(u.tier); });
+  return Math.round(p * prestigeMult);
+}
+function calcIdleRate(){
+  let r = 0;
+  grid.forEach(u => { if(u) r += tierIdleRate(u.tier); });
+  return r * prestigeMult;
+}
+
+function renderGrid(){
+  const gridEl = document.getElementById('grid');
+  gridEl.innerHTML = '';
+  grid.forEach((unit, idx) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (unit ? '' : ' empty');
+    if(unit){
+      const u = document.createElement('div');
+      u.className = 'unit' + (selectedIdx===idx ? ' selected' : '');
+      u.style.background = UNIT_COLORS[Math.min(unit.tier, UNIT_COLORS.length-1)];
+      u.innerHTML = `<div class="icon">${UNIT_ICONS[Math.min(unit.tier, UNIT_ICONS.length-1)]}</div><div class="tier">T${unit.tier+1}</div>`;
+      u.addEventListener('click', () => onSlotClick(idx));
+      slot.appendChild(u);
+    } else {
+      slot.addEventListener('click', () => onSlotClick(idx));
+    }
+    gridEl.appendChild(slot);
+  });
+}
+
+function onSlotClick(idx){
+  if(!gameActive) return;
+  const unit = grid[idx];
+  if(selectedIdx === null){
+    if(unit) { selectedIdx = idx; renderGrid(); }
+    return;
+  }
+  if(selectedIdx === idx){ selectedIdx = null; renderGrid(); return; }
+  const a = grid[selectedIdx], b = grid[idx];
+  if(a && b && a.tier === b.tier){
+    grid[idx] = { tier: a.tier+1 };
+    grid[selectedIdx] = null;
+    beep(500+a.tier*40, 0.12, 'triangle', 0.05);
+    spawnFloatText(idx, `T${a.tier+2}!`, '#C6FF3D');
+  } else if(a && !b){
+    grid[idx] = a; grid[selectedIdx] = null;
+  } else if(a && b){
+    grid[idx] = a; grid[selectedIdx] = b;
+  }
+  selectedIdx = null;
+  renderGrid();
+  updatePowerLabels();
+  saveGame();
+}
+
+function spawnFloatText(gridIdx, text, color){
+  const gridEl = document.getElementById('grid');
+  const slotEl = gridEl.children[gridIdx];
+  if(!slotEl) return;
+  const rect = slotEl.getBoundingClientRect();
+  const gridRect = gridEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = (rect.left - gridRect.left + rect.width/2 - 20)+'px';
+  el.style.top = (rect.top - gridRect.top)+'px';
+  gridEl.style.position = 'relative';
+  gridEl.appendChild(el);
+  setTimeout(()=>el.remove(), 900);
+}
+
+function spawnArenaFloatText(text, color){
+  const arena = document.getElementById('arena');
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = (40+Math.random()*100)+'px';
+  el.style.top = '60px';
+  arena.appendChild(el);
+  setTimeout(()=>el.remove(), 900);
+}
+
+function updatePowerLabels(){
+  const power = calcTotalPower();
+  const idleRate = calcIdleRate();
+  document.getElementById('powerLabel').textContent = power;
+  document.getElementById('idleRateLabel').textContent = `+${idleRate.toFixed(1)} 🪙/s idle`;
+  document.getElementById('goldLabel').textContent = Math.floor(gold);
+  document.getElementById('rankLabel').textContent = rank;
+  const cost = summonCost();
+  document.getElementById('summonCost').textContent = cost;
+  document.getElementById('summonBtn').disabled = gold < cost || !grid.includes(null);
+  document.getElementById('prestigeBtn').classList.toggle('hidden', gold < 500);
+}
+
+function renderEnemy(){
+  document.getElementById('enemyIcon').textContent = enemy.icon;
+  document.getElementById('enemyName').textContent = enemy.name;
+  document.getElementById('waveLabel').textContent = wave;
+  document.getElementById('enemyHpFill').style.width = Math.max(0, enemy.hp/enemy.maxHp*100)+'%';
+}
+
+function summonUnit(){
+  if(!gameActive) return;
+  const cost = summonCost();
+  const emptyIdx = grid.indexOf(null);
+  if(gold < cost || emptyIdx === -1) return;
+  gold -= cost;
+  summonCount++;
+  grid[emptyIdx] = { tier: 0 };
+  beep(400, 0.1, 'square', 0.04);
+  renderGrid();
+  updatePowerLabels();
+  saveGame();
+}
+
+function prestige(){
+  if(gold < 500) return;
+  prestigeMult *= 1.1;
+  rank++;
+  gold = 0; wave = 1; summonCount = 0;
+  grid = Array(ROWS*COLS).fill(null);
+  enemy = makeEnemy(wave);
+  beep(700,0.2,'triangle'); setTimeout(()=>beep(900,0.25,'triangle'),150);
+  renderGrid(); renderEnemy(); updatePowerLabels();
+  saveGame();
+}
+
+function update(dt){
+  if(!gameActive) return;
+  const power = calcTotalPower();
+  const idleRate = calcIdleRate();
+
+  gold += idleRate*dt;
+
+  if(enemy && power > 0){
+    enemy.hp -= power*dt;
+    document.getElementById('enemyHpFill').style.width = Math.max(0, enemy.hp/enemy.maxHp*100)+'%';
+    if(enemy.hp <= 0){
+      gold += enemy.reward;
+      spawnArenaFloatText(`+${enemy.reward} 🪙`, '#FFD65C');
+      beep(600,0.08,'triangle',0.04);
+      wave++;
+      enemy = makeEnemy(wave);
+      renderEnemy();
+      if(enemy.isBoss) spawnArenaFloatText('BOSS WAVE!', '#FF3D6E');
+    }
+  }
+
+  updatePowerLabels();
+
+  if(Date.now() - lastSaveTime > 3000){
+    saveGame();
+    lastSaveTime = Date.now();
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick = ts;
+  const dt = Math.min(0.1, (ts-lastTick)/1000);
+  lastTick = ts;
+  update(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+function startGame(){
+  hide('startScreen'); hide('welcomeBackScreen');
+  enemy = makeEnemy(wave);
+  renderGrid(); renderEnemy(); updatePowerLabels();
+  gameActive = true;
+  saveGame();
+}
+
+document.getElementById('summonBtn').onclick = summonUnit;
+document.getElementById('prestigeBtn').onclick = prestige;
+document.getElementById('startBtn').onclick = startGame;
+document.getElementById('collectBtn').onclick = startGame;
+
+window.addEventListener('beforeunload', () => { if(gameActive) saveGame(); });
+
+// init
+const loadResult = loadSave();
+if(loadResult === 'welcome'){
+  hide('startScreen');
+  show('welcomeBackScreen');
+} else if(loadResult === true){
+  document.getElementById('startBtn').textContent = '▶ Continue Legion';
+}
+</script>
+</body>
+</html>

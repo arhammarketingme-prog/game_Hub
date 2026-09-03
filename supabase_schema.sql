@@ -348,5 +348,6 @@ values
   ('zombie-siege', 'Zombie Siege', 'Defend your base, wave after wave.', 'action', true, 'games/zombie-siege/index.html', 'new', 4.4, 8, 330, 'published', false),
   ('gem-swap', 'Gem Swap', 'Match, chain, and clear the board.', 'puzzle', true, 'games/gem-swap/index.html', 'hot', 4.6, 11, 420, 'published', false),
   ('trade-route', 'Trade Route', 'Buy low, sail far, sell high.', 'strategy', true, 'games/trade-route/index.html', 'new', 4.3, 6, 250, 'published', false),
-  ('fruit-fusion-arena', 'Fruit Fusion Arena', 'Drop, fuse, chase the watermelon.', 'puzzle', true, 'games/fruit-fusion-arena/index.html', 'hot', 4.8, 13, 510, 'published', false)
+  ('fruit-fusion-arena', 'Fruit Fusion Arena', 'Drop, fuse, chase the watermelon.', 'puzzle', true, 'games/fruit-fusion-arena/index.html', 'hot', 4.8, 13, 510, 'published', false),
+  ('merge-legion', 'Merge Legion', 'Merge your army. Earn gold even offline.', 'strategy', true, 'games/merge-legion/index.html', 'top', 4.7, 12, 470, 'published', true)
 on conflict (slug) do nothing;

@@ -16,11 +16,11 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## 48 games live
+## 49 games live
 
-Category spread: **Puzzle 19 · Action 13 · Racing 5 · Strategy 7 · Sports 4**
+Category spread: **Puzzle 19 · Action 13 · Racing 5 · Strategy 8 · Sports 4**
 
-The original 19 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build plus 5 more original games (Archery Master, Turbo Drift Arena, Zombie Siege, Gem Swap, Trade Route) — see each game's own file for its specific mechanic. **Fruit Fusion Arena** is a new custom physics-based drop-and-merge game (Suika-style) with its own lightweight circle-collision engine — no external physics library. All 48 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
+The original 20 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build plus 5 more original games (Archery Master, Turbo Drift Arena, Zombie Siege, Gem Swap, Trade Route) — see each game's own file for its specific mechanic. **Fruit Fusion Arena** is a custom physics-based drop-and-merge game (Suika-style). **Merge Legion** is an idle merge-combat hybrid — units merge on a grid, auto-battle waves, and keep earning gold offline (real elapsed-time calculation, capped at 4 hours, tested across save/load cycles). All 49 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
 
 ## Advertising — architecture in place, no fake numbers
 
