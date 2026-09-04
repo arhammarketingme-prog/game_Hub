@@ -64,6 +64,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    STREET CRICKET — timing-based tap batting
    ============================================================ */
@@ -91,7 +93,7 @@ function beep(freq,dur,type='square',vol=0.05){
 let state='menu';
 let ball = { progress:0, active:false, speed:0.55, resultShown:false };
 let batX=0, batY=0, bowlerX=0, bowlerY=0;
-let runs=0, ballNum=1, ballTotal=10, best=parseInt(localStorage.getItem('sc_best')||'0');
+let runs=0, ballNum=1, ballTotal=10, best=parseInt(safeGet('sc_best','0'));
 let swingFlash=0;
 let lastTick=0;
 
@@ -217,7 +219,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 
 function finishInnings(){
   state='over';
-  if(runs>best){ best=runs; localStorage.setItem('sc_best', best); }
+  if(runs>best){ best=runs; safeSet('sc_best', best); }
   document.getElementById('overTitle').textContent = runs>=30 ? 'GREAT KNOCK!' : 'INNINGS OVER';
   document.getElementById('finalRuns').textContent = runs;
   document.getElementById('finalBest').textContent = best;

@@ -78,12 +78,14 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    GEM SWAP — match-3 puzzle
    ============================================================ */
 const SIZE = 7;
 const GEMS = ['💎','🔷','🔶','💠','🔺','⭐'];
-let level = parseInt(localStorage.getItem('gs_level')||'1');
+let level = parseInt(safeGet('gs_level','1'));
 let grid = [], score=0, moves=20, target=800, gameActive=false, selected=null, busy=false;
 
 let audioCtx=null;
@@ -279,7 +281,7 @@ document.getElementById('startBtn').onclick = () => { hide('startScreen'); initG
 document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('gs_level', level); initGame(); gameActive=true;
+  hide('winScreen'); level++; safeSet('gs_level', level); initGame(); gameActive=true;
 };
 
 addEventListener('resize', renderBoard);

@@ -76,6 +76,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    SKY DEFENDER — vertical shooter, wave-based with boss every 5th wave
    ============================================================ */
@@ -104,7 +106,7 @@ let state='menu';
 let player = { x:0, y:0, r:16, hp:100, maxHp:100, lastFire:0, fireRate:260 };
 let enemies=[], playerBullets=[], enemyBullets=[], particles=[];
 let wave=1, score=0, spawned=0, waveTotal=6, waveCleared=true, waveTimer=0;
-let best = parseInt(localStorage.getItem('sky_best')||'0');
+let best = parseInt(safeGet('sky_best','0'));
 let lastTick=0;
 let dragging=false;
 
@@ -321,7 +323,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function gameOver(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
-  if(score>best){ best=score; localStorage.setItem('sky_best', best); }
+  if(score>best){ best=score; safeSet('sky_best', best); }
   document.getElementById('finalWave').textContent = wave;
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalBest').textContent = best;

@@ -74,6 +74,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    SHADOW DASH — 3-lane reflex dodge/dash
    ============================================================ */
@@ -103,7 +105,7 @@ const LANES = 3;
 let state='menu';
 let lane=1, targetLaneX=0, playerX=0, playerY=0;
 let obstacles=[], coins=[], particles=[];
-let dist=0, speed=6, spawnTimer=0, coinCount=0, best=parseInt(localStorage.getItem('sd_best')||'0');
+let dist=0, speed=6, spawnTimer=0, coinCount=0, best=parseInt(safeGet('sd_best','0'));
 let dashCooldown=0, dashing=0;
 let lastTick=0;
 
@@ -253,7 +255,7 @@ function gameOver(){
   if(state!=='playing') return;
   state='over'; beep(120,0.4,'sawtooth',0.08);
   const finalDist = Math.floor(dist);
-  if(finalDist > best){ best = finalDist; localStorage.setItem('sd_best', best); }
+  if(finalDist > best){ best = finalDist; safeSet('sd_best', best); }
   document.getElementById('finalDist').textContent = finalDist;
   document.getElementById('finalCoins').textContent = coinCount;
   document.getElementById('finalBest').textContent = best;

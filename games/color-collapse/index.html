@@ -102,12 +102,14 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    COLOR COLLAPSE — flood-fill color pop puzzle
    ============================================================ */
 const COLORS = ['#FF3D6E','#C6FF3D','#7A5CFF','#3DD9FF','#FFB13D'];
-let level = parseInt(localStorage.getItem('cc_level')||'1');
-let coins = parseInt(localStorage.getItem('cc_coins')||'0');
+let level = parseInt(safeGet('cc_level','1'));
+let coins = parseInt(safeGet('cc_coins','0'));
 let GRID = 6, board = [], moves = 0, movesMax = 0, score = 0, target = 0, gameActive = false, combo = 0;
 
 const boardEl = document.getElementById('board');
@@ -264,7 +266,7 @@ function checkWin(){
     gameActive = false;
     const earnedCoins = 12 + moves*2 + level*3;
     coins += earnedCoins;
-    localStorage.setItem('cc_coins', coins);
+    safeSet('cc_coins', coins);
     const starCount = moves > movesMax*0.5 ? 3 : moves > movesMax*0.2 ? 2 : 1;
     document.getElementById('starsDisplay').innerHTML =
       Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
@@ -285,7 +287,7 @@ document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen')
 document.getElementById('restartBtn').onclick = () => { initBoard(); gameActive=true; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initBoard(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('cc_level', level); initBoard(); gameActive=true;
+  hide('winScreen'); level++; safeSet('cc_level', level); initBoard(); gameActive=true;
 };
 </script>
 </body>

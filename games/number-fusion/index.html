@@ -75,11 +75,13 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    NUMBER FUSION — 2048-style tile merge
    ============================================================ */
 const SIZE = 4;
-let level = parseInt(localStorage.getItem('nf_level')||'1');
+let level = parseInt(safeGet('nf_level','1'));
 let grid = [], score = 0, target = 128, gameActive = false, tileId = 0;
 
 let audioCtx=null;
@@ -253,7 +255,7 @@ document.getElementById('startBtn').onclick = () => { hide('startScreen'); initG
 document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('nf_level', level); initGame(); gameActive=true;
+  hide('winScreen'); level++; safeSet('nf_level', level); initGame(); gameActive=true;
 };
 
 addEventListener('keydown', e => {

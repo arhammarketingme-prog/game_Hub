@@ -70,6 +70,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    ROBO ARENA — tap-to-attack melee arena combat
    ============================================================ */
@@ -98,7 +100,7 @@ let state='menu';
 let player = { x:0, y:0, r:20*SCALE, hp:120, maxHp:120, atk:18 };
 let enemies=[], particles=[];
 let wave=1, score=0, waveActive=false, waveTimer=0, spawnLeft=0;
-let best = parseInt(localStorage.getItem('robo_best')||'0');
+let best = parseInt(safeGet('robo_best','0'));
 let lastTick=0, dragging=false;
 
 function resetGame(){
@@ -278,7 +280,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function gameOver(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
-  if(score>best){ best=score; localStorage.setItem('robo_best', best); }
+  if(score>best){ best=score; safeSet('robo_best', best); }
   document.getElementById('finalWave').textContent = wave;
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalBest').textContent = best;

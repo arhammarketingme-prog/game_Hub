@@ -72,6 +72,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    STREET DRIFT X — 3-lane racer with hold-to-drift multiplier
    ============================================================ */
@@ -102,7 +104,7 @@ let lane=1, carX=0, carY=0;
 let curves=[], traffic=[], particles=[];
 let dist=0, speed=6, spawnTimer=0, score=0, mult=1, drifting=false, driftHeat=0;
 let inCurve=false, curveDir=0;
-let best=parseInt(localStorage.getItem('sdx_best')||'0');
+let best=parseInt(safeGet('sdx_best','0'));
 let lastTick=0;
 
 function laneX(i){ const w=canvas.width/LANES; return w*i+w/2; }
@@ -277,7 +279,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function crash(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
-  if(score>best){ best=score; localStorage.setItem('sdx_best', best); }
+  if(score>best){ best=score; safeSet('sdx_best', best); }
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalBest').textContent = best;
   show('overScreen');

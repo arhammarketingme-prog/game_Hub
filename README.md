@@ -16,11 +16,21 @@ Instant-play original games platform. Dark, premium, mobile-first. Built as stat
 
 Forms on developer/admin pages are UI-complete but not yet wired to Supabase writes — they show what will happen once auth is connected. This was a deliberate call per the build priority order (play experience first, dashboards after).
 
-## 49 games live
+## 50 games live
 
-Category spread: **Puzzle 19 · Action 13 · Racing 5 · Strategy 8 · Sports 4**
+Category spread: **Puzzle 19 · Action 14 · Racing 5 · Strategy 8 · Sports 4**
 
-The original 20 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build plus 5 more original games (Archery Master, Turbo Drift Arena, Zombie Siege, Gem Swap, Trade Route) — see each game's own file for its specific mechanic. **Fruit Fusion Arena** is a custom physics-based drop-and-merge game (Suika-style). **Merge Legion** is an idle merge-combat hybrid — units merge on a grid, auto-battle waves, and keep earning gold offline (real elapsed-time calculation, capped at 4 hours, tested across save/load cycles). All 49 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
+The original 21 (canvas-built, level/wave progression, upgrades) plus 24 ported from an earlier build plus 5 more original games (Archery Master, Turbo Drift Arena, Zombie Siege, Gem Swap, Trade Route) — see each game's own file for its specific mechanic. **Fruit Fusion Arena** is a custom physics-based drop-and-merge game (Suika-style). **Merge Legion** is an idle merge-combat hybrid with real offline-earnings. **Blob Arena** is a real-time multiplayer .io-style game — players sync live via Supabase Realtime Broadcast + Presence (no game server needed), with automatic single-player fallback if the connection is unavailable. All 50 were checked for load-time and gameplay JS errors before shipping (headless jsdom pass, zero errors). Every game has a fixed **✕** exit button (top-right) that routes back to `game.html?id=<slug>` in this platform.
+
+### Full-catalog bug audit (all 50 games)
+A systematic pass was run across every game after a real bug was reported in Fruit Fusion Arena. Two bug classes were found and fixed platform-wide:
+1. **Game-over/danger detection gated on near-zero velocity** (Fruit Fusion Arena) — under heavy physics overlap, objects jitter continuously and rarely sit at true-zero velocity, so a "must be settled" condition could silently never fire even when the board had clearly overflowed. Fixed by detecting sustained position alone, independent of velocity.
+2. **Unwrapped `localStorage` calls** (25 games) — `getItem`/`setItem` called directly, with no `try/catch`. In any browser context where storage access throws (some private-browsing modes, storage-restricted settings), this crashed the game before the start screen could even render. All affected games now route through `safeGet()`/`safeSet()` helpers that fail silently and fall back to defaults instead of crashing.
+
+Every game was re-tested after fixes: syntax check, normal-play interaction, and a simulated "localStorage throws on every access" environment — all 50 pass with zero errors in every condition.
+
+### Blob Arena setup note
+Blob Arena connects to a Supabase project for realtime sync (URL + anon public key are already wired into `games/blob-arena/index.html` — the anon key is safe to expose client-side by design). No database table is required — it uses Supabase's ephemeral Broadcast + Presence channels only. If the Supabase project is ever paused, deleted, or the keys rotated, the game still works standalone in single-player mode (pellets only, no other live players) — it never crashes, it just shows "Offline mode" in the HUD.
 
 ## Advertising — architecture in place, no fake numbers
 

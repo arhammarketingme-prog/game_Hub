@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Blob Arena — GameHub</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{ --volt:#C6FF3D; --violet:#7A5CFF; --hot:#FF3D6E; --gold:#FFD65C; --cyan:#3DD9FF; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{background:#0a0e14;overflow:hidden;height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#0f1420;}
+  .hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}
+  .pill{background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:6px 12px;font-size:11.5px;color:#F3F3F7;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pill b{color:var(--gold);font-family:monospace;}
+  .pill.online{ color:var(--volt); }
+  .pill.offline{ color:#9494A6; }
+  .icon-btn{pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(20,20,31,0.75);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+  .leaderboard{position:absolute;top:70px;right:16px;z-index:5;background:rgba(20,20,31,0.75);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 12px;min-width:130px;pointer-events:none;}
+  .leaderboard-title{font-size:9px;font-weight:800;color:#9494A6;letter-spacing:1px;margin-bottom:6px;}
+  .leaderboard-row{font-size:11px;color:#F3F3F7;display:flex;justify-content:space-between;gap:8px;padding:2px 0;}
+  .leaderboard-row.me{color:var(--volt);font-weight:800;}
+  .stick-zone{position:absolute;left:0;bottom:0;width:50%;height:50%;z-index:4;}
+  .stick-base{position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(198,255,61,0.35);display:none;}
+  .stick-knob{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(198,255,61,0.55);top:28px;left:28px;}
+  .overlay{position:absolute;inset:0;background:rgba(4,6,10,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:10;}
+  .hidden{display:none;}
+  .title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;background:linear-gradient(90deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:#9494A6;font-size:13px;margin-bottom:18px;max-width:280px;line-height:1.5;}
+  .name-input{width:220px;padding:12px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;font-size:14px;margin-bottom:16px;text-align:center;}
+  .btn{padding:14px 30px;border-radius:9px;font-weight:800;font-size:15px;border:none;margin-bottom:12px;min-width:220px;}
+  .btn-primary{background:var(--volt);color:#0A0A0F;}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);}
+  .statrow{display:flex;gap:22px;margin-bottom:26px;}
+  .stat{text-align:center;}
+  .stat b{display:block;font-size:22px;font-family:monospace;color:var(--cyan);}
+  .stat span{font-size:11px;color:#9494A6;}
+  .connstatus{font-size:11px;margin-bottom:14px;padding:6px 14px;border-radius:16px;background:rgba(255,255,255,0.06);}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="pill">📏 <b id="sizeLabel">10</b></div>
+      <div class="pill" id="onlinePill">👥 <b id="onlineLabel">1</b></div>
+    </div>
+    <a class="icon-btn" href="../../game.html?id=blob-arena">✕</a>
+  </div>
+  <div class="leaderboard" id="leaderboard">
+    <div class="leaderboard-title">TOP BLOBS</div>
+    <div id="leaderboardRows"></div>
+  </div>
+  <div class="stick-zone" id="stickZone"><div class="stick-base" id="stickBase"><div class="stick-knob" id="stickKnob"></div></div></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title">BLOB ARENA</div>
+    <div class="sub">Drag on the left to move. Eat glowing pellets to grow. Bigger blobs can eat smaller ones — stay away from anything larger than you. Real players, same arena, live.</div>
+    <input class="name-input" id="nameInput" placeholder="Your name" maxlength="12">
+    <div class="connstatus" id="connStatus">🔌 Connecting...</div>
+    <button class="btn btn-primary" id="startBtn">▶ Enter Arena</button>
+  </div>
+  <div class="overlay hidden" id="overScreen">
+    <div class="title" style="color:#FF3D6E;-webkit-text-fill-color:#FF3D6E;">EATEN</div>
+    <div class="statrow">
+      <div class="stat"><b id="finalSize">10</b><span>FINAL SIZE</span></div>
+      <div class="stat"><b id="finalBest">10</b><span>BEST EVER</span></div>
+    </div>
+    <button class="btn btn-primary" id="retryBtn">⟲ Respawn</button>
+    <a class="btn btn-ghost" href="../../game.html?id=blob-arena" style="text-decoration:none;display:block;text-align:center;">🎮 Back to GameHub</a>
+  </div>
+</div>
+
+<script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
+/* ============================================================
+   BLOB ARENA — real-time multiplayer .io-style arena
+   Uses Supabase Realtime Broadcast + Presence for sync.
+   Falls back to single-player mode if connection unavailable.
+   ============================================================ */
+const SUPABASE_URL = "https://hbwlqlvfemqrbmqdwxwr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhid2xxbHZmZW1xcmJtcWR3eHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTg2NzMsImV4cCI6MjEwMjA3NDY3M30.MdT12IhLexwTsBA94L6ZjcQ-A8tvjEzTPhY__qxOthA";
+const CHANNEL_NAME = "gamehub-blob-arena";
+const WORLD_SIZE = 2400;
+const PELLET_COUNT = 160;
+const BROADCAST_HZ = 110; // ms between position broadcasts
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  SCALE = Math.min(2.1, Math.max(0.85, Math.min(canvas.width, canvas.height) / 420));
+}
+resize(); addEventListener('resize', resize);
+
+let audioCtx=null;
+function beep(freq,dur,type='sine',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+// --- deterministic pellet field (seeded, same across all clients) ---
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function buildPellets(){
+  const rng = mulberry32(1337);
+  const arr = [];
+  for(let i=0;i<PELLET_COUNT;i++){
+    arr.push({
+      id: i,
+      x: rng()*WORLD_SIZE,
+      y: rng()*WORLD_SIZE,
+      color: ['#C6FF3D','#3DD9FF','#FF3D6E','#FFD65C','#7A5CFF'][Math.floor(rng()*5)],
+      eaten: false
+    });
+  }
+  return arr;
+}
+let pellets = buildPellets();
+
+function randId(){ return 'p_' + Math.random().toString(36).slice(2, 10); }
+const myId = randId();
+let myName = 'Player' + Math.floor(1000+Math.random()*9000);
+
+let me = { x: WORLD_SIZE/2, y: WORLD_SIZE/2, r: 16, color: '#C6FF3D', invuln: 0 };
+let bestSize = parseInt(safeGet('ba_best','16'));
+let remotePlayers = {}; // id -> {x,y,r,color,name,lastSeen}
+let particles = [];
+let state = 'menu';
+let stickVec = {x:0, y:0};
+let lastTick = 0;
+let lastBroadcast = 0;
+let onlineMode = false;
+let channel = null;
+let sb = null;
+
+function sizeToPoints(r){ return Math.round((r-16)*2); }
+
+function tryConnect(){
+  const statusEl = document.getElementById('connStatus');
+  if(typeof supabase === 'undefined' || !supabase.createClient){
+    statusEl.textContent = '📴 Offline mode (single player)';
+    onlineMode = false;
+    return;
+  }
+  try{
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    channel = sb.channel(CHANNEL_NAME, { config: { broadcast: { self: false }, presence: { key: myId } } });
+
+    channel.on('broadcast', { event: 'move' }, (msg) => {
+      const p = msg.payload;
+      if(!p || p.id === myId) return;
+      remotePlayers[p.id] = { x:p.x, y:p.y, r:p.r, color:p.color, name:p.name, lastSeen: performance.now() };
+    });
+
+    channel.on('broadcast', { event: 'eat_pellet' }, (msg) => {
+      const pid = msg.payload && msg.payload.pelletId;
+      if(pid!=null && pellets[pid]) pellets[pid].eaten = true;
+    });
+
+    channel.on('broadcast', { event: 'eat_player' }, (msg) => {
+      const { eatenId } = msg.payload || {};
+      if(eatenId === myId){
+        respawnMe();
+      } else if(eatenId && remotePlayers[eatenId]){
+        delete remotePlayers[eatenId];
+      }
+    });
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state_ = channel.presenceState();
+      const activeIds = new Set(Object.keys(state_));
+      Object.keys(remotePlayers).forEach(id => { if(!activeIds.has(id)) delete remotePlayers[id]; });
+      updateOnlineCount(activeIds.size + 1);
+    });
+    channel.on('presence', { event: 'leave' }, ({ key }) => { delete remotePlayers[key]; });
+
+    channel.subscribe((status) => {
+      if(status === 'SUBSCRIBED'){
+        onlineMode = true;
+        statusEl.textContent = '🟢 Connected — live arena';
+        channel.track({ name: myName });
+        updateOnlineCount(1);
+      } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+        onlineMode = false;
+        statusEl.textContent = '📴 Offline mode (single player)';
+      }
+    });
+
+    setTimeout(() => {
+      if(!onlineMode) statusEl.textContent = '📴 Offline mode (single player)';
+    }, 5000);
+  }catch(e){
+    onlineMode = false;
+    statusEl.textContent = '📴 Offline mode (single player)';
+  }
+}
+
+function updateOnlineCount(n){
+  document.getElementById('onlineLabel').textContent = n;
+  document.getElementById('onlinePill').className = 'pill ' + (onlineMode ? 'online' : 'offline');
+}
+
+function broadcastMove(){
+  if(!onlineMode || !channel) return;
+  try{
+    channel.send({ type:'broadcast', event:'move', payload:{ id:myId, x:me.x, y:me.y, r:me.r, color:me.color, name:myName } });
+  }catch(e){}
+}
+function broadcastEatPellet(pelletId){
+  if(!onlineMode || !channel) return;
+  try{ channel.send({ type:'broadcast', event:'eat_pellet', payload:{ pelletId } }); }catch(e){}
+}
+function broadcastEatPlayer(eatenId){
+  if(!onlineMode || !channel) return;
+  try{ channel.send({ type:'broadcast', event:'eat_player', payload:{ eaterId:myId, eatenId } }); }catch(e){}
+}
+
+function spawnParticles(x,y,color,count=10){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2, sp=1+Math.random()*2.5;
+    particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:18, color });
+  }
+}
+
+function respawnMe(){
+  me.x = 100 + Math.random()*(WORLD_SIZE-200);
+  me.y = 100 + Math.random()*(WORLD_SIZE-200);
+  me.r = 16;
+  me.invuln = 2;
+  updateHUD();
+}
+
+function resetGame(){
+  pellets = buildPellets();
+  respawnMe();
+  particles = [];
+  state = 'playing';
+}
+
+function updateHUD(){
+  document.getElementById('sizeLabel').textContent = sizeToPoints(me.r);
+  renderLeaderboard();
+}
+
+function renderLeaderboard(){
+  const all = [{ id:myId, name:myName+' (you)', r:me.r, isMe:true }];
+  Object.entries(remotePlayers).forEach(([id,p]) => all.push({ id, name:p.name||'Player', r:p.r, isMe:false }));
+  all.sort((a,b)=>b.r-a.r);
+  const top = all.slice(0,5);
+  document.getElementById('leaderboardRows').innerHTML = top.map(p =>
+    `<div class="leaderboard-row${p.isMe?' me':''}"><span>${p.name}</span><span>${sizeToPoints(p.r)}</span></div>`
+  ).join('');
+}
+
+function update(dt){
+  if(state!=='playing') return;
+  if(me.invuln>0) me.invuln -= dt;
+
+  const mag = Math.hypot(stickVec.x, stickVec.y);
+  if(mag>0.15){
+    const speed = Math.max(60, 220 - me.r*1.2) * SCALE;
+    me.x += (stickVec.x/Math.max(mag,1)) * speed * dt;
+    me.y += (stickVec.y/Math.max(mag,1)) * speed * dt;
+  }
+  me.x = Math.max(me.r, Math.min(WORLD_SIZE-me.r, me.x));
+  me.y = Math.max(me.r, Math.min(WORLD_SIZE-me.r, me.y));
+
+  // eat pellets
+  pellets.forEach(p => {
+    if(p.eaten) return;
+    const d = Math.hypot(p.x-me.x, p.y-me.y);
+    if(d < me.r + 6){
+      p.eaten = true;
+      me.r = Math.min(160, me.r + 0.6);
+      spawnParticles(p.x, p.y, p.color, 6);
+      beep(500+Math.random()*100, 0.05, 'triangle', 0.03);
+      broadcastEatPellet(p.id);
+      updateHUD();
+    }
+  });
+
+  // player-vs-player: I eat smaller overlapping players
+  if(me.invuln<=0){
+    Object.entries(remotePlayers).forEach(([id, p]) => {
+      const d = Math.hypot(p.x-me.x, p.y-me.y);
+      if(d < me.r*0.7 && me.r > p.r*1.15){
+        me.r = Math.min(200, me.r + p.r*0.35);
+        spawnParticles(p.x, p.y, p.color, 20);
+        beep(200, 0.2, 'sawtooth', 0.05);
+        broadcastEatPlayer(id);
+        delete remotePlayers[id];
+        updateHUD();
+      } else if(d < p.r*0.7 && p.r > me.r*1.15){
+        // I got eaten by a bigger remote player (they may also detect this and broadcast, but
+        // we self-trigger too for responsiveness in case their broadcast lags)
+        gameOverEaten();
+      }
+    });
+  }
+
+  particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.life--; });
+  particles = particles.filter(p => p.life>0);
+
+  // prune stale remote players (no update in 8s = disconnected)
+  const now = performance.now();
+  Object.keys(remotePlayers).forEach(id => {
+    if(now - (remotePlayers[id].lastSeen||0) > 8000) delete remotePlayers[id];
+  });
+
+  if(performance.now() - lastBroadcast > BROADCAST_HZ){
+    lastBroadcast = performance.now();
+    broadcastMove();
+  }
+}
+
+function worldToScreen(x,y){
+  return { x: canvas.width/2 + (x-me.x), y: canvas.height/2 + (y-me.y) };
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // grid background for depth cue
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  const gridSize = 60*SCALE;
+  const offX = (canvas.width/2 - me.x) % gridSize;
+  const offY = (canvas.height/2 - me.y) % gridSize;
+  for(let x=offX; x<canvas.width; x+=gridSize){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for(let y=offY; y<canvas.height; y+=gridSize){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+  // world border
+  const tl = worldToScreen(0,0), br = worldToScreen(WORLD_SIZE, WORLD_SIZE);
+  ctx.strokeStyle = 'rgba(255,61,110,0.3)'; ctx.lineWidth = 3;
+  ctx.strokeRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+
+  // pellets
+  pellets.forEach(p => {
+    if(p.eaten) return;
+    const s = worldToScreen(p.x, p.y);
+    if(s.x<-20||s.x>canvas.width+20||s.y<-20||s.y>canvas.height+20) return;
+    ctx.fillStyle = p.color; ctx.shadowColor = p.color; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 5*SCALE, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  // particles
+  particles.forEach(p => {
+    const s = worldToScreen(p.x, p.y);
+    ctx.globalAlpha = p.life/18;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3*SCALE, 0, 7); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // remote players
+  Object.values(remotePlayers).forEach(p => {
+    const s = worldToScreen(p.x, p.y);
+    ctx.fillStyle = p.color || '#7A5CFF';
+    ctx.shadowColor = p.color || '#7A5CFF'; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(s.x, s.y, p.r*SCALE, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `${11*SCALE}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name||'Player', s.x, s.y - p.r*SCALE - 6);
+  });
+
+  // me
+  if(state==='playing'){
+    const s = { x: canvas.width/2, y: canvas.height/2 };
+    ctx.globalAlpha = me.invuln>0 ? 0.5+0.3*Math.sin(performance.now()/80) : 1;
+    ctx.fillStyle = me.color; ctx.shadowColor = me.color; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(s.x, s.y, me.r*SCALE, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `${12*SCALE}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(myName, s.x, s.y - me.r*SCALE - 8);
+  }
+}
+
+function loop(ts){
+  if(!lastTick) lastTick = ts;
+  const dt = Math.min(0.05, (ts-lastTick)/1000);
+  lastTick = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// joystick
+const stickZone=document.getElementById('stickZone'), stickBase=document.getElementById('stickBase'), stickKnob=document.getElementById('stickKnob');
+let stickId=null, stickOrigin={x:0,y:0};
+function stickStart(x,y,id){
+  stickId=id; stickOrigin={x,y};
+  stickBase.style.display='block';
+  stickBase.style.left=(x-50)+'px'; stickBase.style.top=(y-50)+'px';
+  stickKnob.style.left='28px'; stickKnob.style.top='28px';
+}
+function stickMove(x,y){
+  let dx=x-stickOrigin.x, dy=y-stickOrigin.y;
+  const max=50, dist=Math.hypot(dx,dy);
+  if(dist>max){ dx=dx/dist*max; dy=dy/dist*max; }
+  stickKnob.style.left=(28+dx)+'px'; stickKnob.style.top=(28+dy)+'px';
+  stickVec={x:dx/max,y:dy/max};
+}
+function stickEnd(){ stickId=null; stickVec={x:0,y:0}; stickBase.style.display='none'; }
+stickZone.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; stickStart(t.clientX,t.clientY,t.identifier); }, {passive:true});
+stickZone.addEventListener('touchmove', e=>{ for(const t of e.changedTouches){ if(t.identifier===stickId) stickMove(t.clientX,t.clientY); } }, {passive:true});
+stickZone.addEventListener('touchend', e=>{ for(const t of e.changedTouches){ if(t.identifier===stickId) stickEnd(); } }, {passive:true});
+stickZone.addEventListener('mousedown', e=>stickStart(e.clientX,e.clientY,'m'));
+addEventListener('mousemove', e=>{ if(stickId==='m') stickMove(e.clientX,e.clientY); });
+addEventListener('mouseup', ()=>{ if(stickId==='m') stickEnd(); });
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('startBtn').onclick = () => {
+  const nameVal = document.getElementById('nameInput').value.trim();
+  if(nameVal) myName = nameVal.slice(0,12);
+  hide('startScreen');
+  resetGame();
+  if(onlineMode && channel){
+    try{ channel.track({ name: myName }); }catch(e){}
+  }
+};
+document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); };
+
+function gameOverEaten(){
+  if(state!=='playing') return;
+  state='over';
+  beep(140,0.35,'sawtooth',0.06);
+  const finalSize = sizeToPoints(me.r);
+  if(me.r > bestSize){ bestSize = me.r; safeSet('ba_best', Math.round(bestSize)); }
+  document.getElementById('finalSize').textContent = finalSize;
+  document.getElementById('finalBest').textContent = sizeToPoints(bestSize);
+  show('overScreen');
+}
+
+tryConnect();
+</script>
+</body>
+</html>

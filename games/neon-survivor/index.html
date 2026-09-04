@@ -102,6 +102,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    NEON SURVIVOR — top-down wave survival
    Original mechanics/art — canvas 2D, no external assets.
@@ -140,7 +142,7 @@ let state = 'menu'; // menu | playing | paused | levelup | over
 let player = null, enemies = [], bullets = [], particles = [], xpOrbs = [], coinOrbs = [];
 let elapsed = 0, lastSpawn = 0, spawnInterval = 1600, lastTick = 0;
 let coins = 0, level = 1, xp = 0, xpNeeded = 10;
-let bestTime = parseFloat(localStorage.getItem('ns_best')||'0');
+let bestTime = parseFloat(safeGet('ns_best','0'));
 
 function resetGame(){
   player = {
@@ -419,7 +421,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 
 function gameOver(){
   state='over'; beep(110,0.5,'sawtooth',0.08);
-  if(elapsed > bestTime){ bestTime = elapsed; localStorage.setItem('ns_best', bestTime); }
+  if(elapsed > bestTime){ bestTime = elapsed; safeSet('ns_best', bestTime); }
   const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
   document.getElementById('finalTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   document.getElementById('finalCoins').textContent = coins;

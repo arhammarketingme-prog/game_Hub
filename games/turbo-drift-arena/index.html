@@ -64,6 +64,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    TURBO DRIFT ARENA — hold-to-drift arena scoring
    ============================================================ */
@@ -92,7 +94,7 @@ let state='menu';
 let carAngle=0, carSpeed=3.2, radius=0, centerX=0, centerY=0, carPos=0;
 let steering=0, drifting=false, driftTime=0, comboCount=0;
 let score=0, timeLeft=60;
-let best = parseInt(localStorage.getItem('tda_best')||'0');
+let best = parseInt(safeGet('tda_best','0'));
 let trail=[];
 let lastTick=0;
 
@@ -229,7 +231,7 @@ function finishRun(){
   if(state!=='playing') return;
   state='over';
   const finalScore = Math.floor(score);
-  if(finalScore>best){ best=finalScore; localStorage.setItem('tda_best', best); }
+  if(finalScore>best){ best=finalScore; safeSet('tda_best', best); }
   document.getElementById('finalScore').textContent = finalScore;
   document.getElementById('finalBest').textContent = best;
   show('overScreen');

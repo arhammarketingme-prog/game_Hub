@@ -78,6 +78,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    BLOCK ESCAPE — Sokoban-style push puzzle
    Grid legend: # wall, . floor, T target, C crate, P player
@@ -87,7 +89,7 @@ const LEVELS = [
   ["######","#P...#","#.CC.#","#.TT.#","#....#","######"],
   ["#######","#..P..#","#.C.C.#","#.T.T.#","#..C..#","#..T..#","#######"]
 ];
-let level = parseInt(localStorage.getItem('be_level')||'1');
+let level = parseInt(safeGet('be_level','1'));
 let grid = [], playerPos = {}, moves = 0, history = [], gameActive = false;
 
 const boardEl = document.getElementById('board');
@@ -205,7 +207,7 @@ document.getElementById('startBtn').onclick = () => { hide('startScreen'); loadL
 document.getElementById('undoBtn').onclick = undo;
 document.getElementById('restartBtn').onclick = () => { loadLevel(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('be_level', level); loadLevel(); gameActive=true;
+  hide('winScreen'); level++; safeSet('be_level', level); loadLevel(); gameActive=true;
 };
 
 document.querySelectorAll('.padbtn').forEach(b => {

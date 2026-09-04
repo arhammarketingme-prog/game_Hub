@@ -63,6 +63,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    SKY TRACK — futuristic floating-lane racer with gaps
    ============================================================ */
@@ -92,7 +94,7 @@ let state='menu';
 let lane=1, shipX=0, shipY=0, shipZ=0;
 let segments=[], particles=[];
 let dist=0, speed=6, spawnTimer=0;
-let best = parseInt(localStorage.getItem('skt_best')||'0');
+let best = parseInt(safeGet('skt_best','0'));
 let lastTick=0;
 const SEG_H = 60;
 
@@ -204,7 +206,7 @@ function crash(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
   const finalDist = Math.floor(dist);
-  if(finalDist>best){ best=finalDist; localStorage.setItem('skt_best', best); }
+  if(finalDist>best){ best=finalDist; safeSet('skt_best', best); }
   document.getElementById('finalDist').textContent = finalDist;
   document.getElementById('finalBest').textContent = best;
   show('overScreen');

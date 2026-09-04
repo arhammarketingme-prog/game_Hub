@@ -100,6 +100,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    MERGE FORGE — grid merge puzzle
    Tiers of forged items; merge two adjacent equal tiers -> next tier.
@@ -107,8 +109,8 @@
 const TIERS = ['🪨','🔩','⚙️','🗡️','⚔️','🛡️','👑','💎'];
 const TIER_COLORS = ['#3a3a4a','#4a4560','#5a4a80','#6a4aa0','#7a5cff','#a05cff','#ff5cd0','#ffd65c'];
 
-let level = parseInt(localStorage.getItem('mf_level')||'1');
-let coins = parseInt(localStorage.getItem('mf_coins')||'0');
+let level = parseInt(safeGet('mf_level','1'));
+let coins = parseInt(safeGet('mf_coins','0'));
 let GRID = 4, board = [], selected = null, moves = 0, movesMax = 0, goalTier = 3, gameActive = false;
 
 const boardEl = document.getElementById('board');
@@ -214,7 +216,7 @@ function checkWin(reachedTier){
     gameActive = false;
     const earnedCoins = 10 + moves*2 + level*3;
     coins += earnedCoins;
-    localStorage.setItem('mf_coins', coins);
+    safeSet('mf_coins', coins);
     const starCount = moves > movesMax*0.5 ? 3 : moves > movesMax*0.2 ? 2 : 1;
     document.getElementById('starsDisplay').innerHTML =
       Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
@@ -235,7 +237,7 @@ document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen')
 document.getElementById('restartBtn').onclick = () => { initBoard(); gameActive=true; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initBoard(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('mf_level', level); initBoard(); gameActive=true;
+  hide('winScreen'); level++; safeSet('mf_level', level); initBoard(); gameActive=true;
 };
 document.getElementById('shuffleBtn').onclick = () => {
   if(!gameActive || moves<=1) return;

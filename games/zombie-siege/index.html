@@ -62,6 +62,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    ZOMBIE SIEGE — fixed-position tap-to-shoot wave defense
    ============================================================ */
@@ -90,7 +92,7 @@ let state='menu';
 let baseX=0, baseY=0, baseHp=100, baseMaxHp=100;
 let zombies=[], bullets=[], particles=[];
 let wave=1, kills=0, zombiesRemaining=0, spawnTimer=0, spawnInterval=1.2;
-let best = parseInt(localStorage.getItem('zs_best')||'1');
+let best = parseInt(safeGet('zs_best','1'));
 let lastTick=0;
 
 function resetGame(){
@@ -242,7 +244,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function gameOver(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
-  if(wave>best){ best=wave; localStorage.setItem('zs_best', best); }
+  if(wave>best){ best=wave; safeSet('zs_best', best); }
   document.getElementById('finalWave').textContent = wave;
   document.getElementById('finalKills').textContent = kills;
   document.getElementById('finalBest').textContent = best;

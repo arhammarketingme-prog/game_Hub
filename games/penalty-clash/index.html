@@ -66,6 +66,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    PENALTY CLASH — drag-to-shoot penalty shootout
    ============================================================ */
@@ -95,7 +97,7 @@ let ball={x:0,y:0,r:14,vx:0,vy:0,moving:false};
 let ballStart={x:0,y:0};
 let goal={x:0,y:0,w:200,h:110};
 let keeper={x:0,y:0,r:20,targetX:0};
-let round=1, roundTotal=5, score=0, best=parseInt(localStorage.getItem('pk_best')||'0');
+let round=1, roundTotal=5, score=0, best=parseInt(safeGet('pk_best','0'));
 let dragging=false, dragStart=null, dragCur=null;
 let resolving=false;
 let lastTick=0;
@@ -242,7 +244,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 
 function finishMatch(){
   state='over';
-  if(score>best){ best=score; localStorage.setItem('pk_best', best); }
+  if(score>best){ best=score; safeSet('pk_best', best); }
   document.getElementById('overTitle').textContent = score>=roundTotal*0.6 ? 'GREAT SHOOTOUT!' : 'MATCH COMPLETE';
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalTotal').textContent = roundTotal;

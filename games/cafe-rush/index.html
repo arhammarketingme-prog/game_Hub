@@ -91,6 +91,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    CAFE RUSH — time-management order serving
    ============================================================ */
@@ -103,8 +105,8 @@ const MENU = [
 ];
 const FACES = ['🧑','👩','👨','🧔','👵','👴','👧','🧑‍🦱'];
 
-let level = parseInt(localStorage.getItem('cr_level')||'1');
-let coins = parseInt(localStorage.getItem('cr_coins')||'0');
+let level = parseInt(safeGet('cr_level','1'));
+let coins = parseInt(safeGet('cr_coins','0'));
 let gameActive=false, timeLeft=60, served=0, target=8, spawnTimer=0, selectedItem=null;
 let orders = [];
 let lastTick=0;
@@ -224,7 +226,7 @@ function updateHUD(){
 function checkWin(){
   if(served>=target && gameActive){
     gameActive=false;
-    localStorage.setItem('cr_coins', coins);
+    safeSet('cr_coins', coins);
     const starCount = timeLeft>25 ? 3 : timeLeft>10 ? 2 : 1;
     document.getElementById('starsDisplay').innerHTML =
       Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
@@ -254,7 +256,7 @@ document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen')
 document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=true; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('cr_level', level); initGame(); gameActive=true;
+  hide('winScreen'); level++; safeSet('cr_level', level); initGame(); gameActive=true;
 };
 </script>
 </body>

@@ -349,5 +349,6 @@ values
   ('gem-swap', 'Gem Swap', 'Match, chain, and clear the board.', 'puzzle', true, 'games/gem-swap/index.html', 'hot', 4.6, 11, 420, 'published', false),
   ('trade-route', 'Trade Route', 'Buy low, sail far, sell high.', 'strategy', true, 'games/trade-route/index.html', 'new', 4.3, 6, 250, 'published', false),
   ('fruit-fusion-arena', 'Fruit Fusion Arena', 'Drop, fuse, chase the watermelon.', 'puzzle', true, 'games/fruit-fusion-arena/index.html', 'hot', 4.8, 13, 510, 'published', false),
-  ('merge-legion', 'Merge Legion', 'Merge your army. Earn gold even offline.', 'strategy', true, 'games/merge-legion/index.html', 'top', 4.7, 12, 470, 'published', true)
+  ('merge-legion', 'Merge Legion', 'Merge your army. Earn gold even offline.', 'strategy', true, 'games/merge-legion/index.html', 'top', 4.7, 12, 470, 'published', true),
+  ('blob-arena', 'Blob Arena', 'Real players, one arena, live right now.', 'action', true, 'games/blob-arena/index.html', 'top', 4.9, 16, 620, 'published', true)
 on conflict (slug) do nothing;

@@ -61,6 +61,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    ARCHERY MASTER — drag-to-aim bow shooting
    ============================================================ */
@@ -88,7 +90,7 @@ function beep(freq,dur,type='square',vol=0.05){
 let state='menu';
 let bowX=0, bowY=0, targetX=0, targetY=0, targetDir=1, targetSpeed=1.4;
 let arrow=null, arrows=[], score=0, arrowNum=1, arrowTotal=8;
-let best = parseInt(localStorage.getItem('am_best')||'0');
+let best = parseInt(safeGet('am_best','0'));
 let dragging=false, dragStart={x:0,y:0}, dragNow={x:0,y:0};
 let lastTick=0;
 
@@ -246,7 +248,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function finishRound(){
   if(state!=='playing') return;
   state='over';
-  if(score>best){ best=score; localStorage.setItem('am_best', best); }
+  if(score>best){ best=score; safeSet('am_best', best); }
   document.getElementById('overTitle').textContent = score>=50 ? 'MASTER ARCHER!' : 'ROUND OVER';
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalBest').textContent = best;

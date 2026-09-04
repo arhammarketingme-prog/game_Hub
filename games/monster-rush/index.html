@@ -71,6 +71,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    MONSTER RUSH — survival action, weapon pickups
    ============================================================ */
@@ -99,7 +101,7 @@ let state='menu';
 let player = { x:0, y:0, r:16, hp:100, maxHp:100, lastFire:0, fireRate:400, dmg:9, multishot:1 };
 let monsters=[], bullets=[], drops=[], particles=[];
 let elapsed=0, kills=0, lastSpawn=0;
-let best = parseInt(localStorage.getItem('mr_best')||'0');
+let best = parseInt(safeGet('mr_best','0'));
 let lastTick=0;
 let stickVec={x:0,y:0};
 
@@ -287,7 +289,7 @@ document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetG
 function gameOver(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
-  if(elapsed>best){ best=elapsed; localStorage.setItem('mr_best', best); }
+  if(elapsed>best){ best=elapsed; safeSet('mr_best', best); }
   const m=Math.floor(elapsed/60), s=Math.floor(elapsed%60);
   const bm=Math.floor(best/60), bs=Math.floor(best%60);
   document.getElementById('finalTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;

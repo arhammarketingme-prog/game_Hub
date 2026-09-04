@@ -91,6 +91,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    NITRO RUSH — 4-lane arcade racer with nitro boost meter
    ============================================================ */
@@ -121,7 +123,7 @@ let lane=1, carX=0, carY=0;
 let traffic=[], coins=[], particles=[];
 let dist=0, baseSpeed=7, speed=7, spawnTimer=0, coinCount=0;
 let nitro=0, nitroActive=0;
-let best=parseInt(localStorage.getItem('nr_best')||'0');
+let best=parseInt(safeGet('nr_best','0'));
 let lastTick=0;
 
 function laneX(i){ const w=canvas.width/LANES; return w*i + w/2; }
@@ -286,7 +288,7 @@ function crash(){
   if(state!=='playing') return;
   state='over'; beep(110,0.4,'sawtooth',0.08);
   const finalDist = Math.floor(dist);
-  if(finalDist>best){ best=finalDist; localStorage.setItem('nr_best', best); }
+  if(finalDist>best){ best=finalDist; safeSet('nr_best', best); }
   document.getElementById('finalDist').textContent = finalDist;
   document.getElementById('finalCoins').textContent = coinCount;
   document.getElementById('finalBest').textContent = best;

@@ -88,6 +88,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    TRADE ROUTE — buy-low-sell-high trading strategy
    ============================================================ */
@@ -99,7 +101,7 @@ const GOODS = [
 ];
 const CITIES = ['Porto Nova','Sandhaven','Ivory Reach','Coral Bay','Amber Hold','Silverport','Duskmere','Goldcrest'];
 
-let level = parseInt(localStorage.getItem('tr_level')||'1');
+let level = parseInt(safeGet('tr_level','1'));
 let gold=100, cargoMax=6, cargo={}, trip=1, tripTotal=8, target=400, prices={}, gameActive=false;
 
 let audioCtx=null;
@@ -257,7 +259,7 @@ document.getElementById('restartBtn').onclick = () => { initGame(); gameActive=t
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); initGame(); gameActive=true; renderCargoStrip(); };
 document.getElementById('travelBtn').onclick = travelNext;
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('tr_level', level); initGame(); gameActive=true; renderCargoStrip();
+  hide('winScreen'); level++; safeSet('tr_level', level); initGame(); gameActive=true; renderCargoStrip();
 };
 </script>
 </body>

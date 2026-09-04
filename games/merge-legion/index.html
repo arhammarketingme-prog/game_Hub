@@ -168,9 +168,11 @@ function loadSave(){
 }
 
 function saveGame(){
-  localStorage.setItem(SAVE_KEY, JSON.stringify({
-    gold, rank, wave, prestigeMult, summonCount, grid, lastActive: Date.now()
-  }));
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      gold, rank, wave, prestigeMult, summonCount, grid, lastActive: Date.now()
+    }));
+  }catch(e){}
 }
 
 function calcTotalPower(){

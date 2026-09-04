@@ -81,6 +81,8 @@
 </div>
 
 <script>
+function safeGet(key, fallback){ try{ return localStorage.getItem(key) ?? fallback; }catch(e){ return fallback; } }
+function safeSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 /* ============================================================
    HOOP MASTER — drag-to-shoot basketball with moving hoop
    ============================================================ */
@@ -105,8 +107,8 @@ function beep(freq,dur,type='square',vol=0.05){
   }catch(e){}
 }
 
-let level = parseInt(localStorage.getItem('hm_level')||'1');
-let coins = parseInt(localStorage.getItem('hm_coins')||'0');
+let level = parseInt(safeGet('hm_level','1'));
+let coins = parseInt(safeGet('hm_coins','0'));
 let state='menu';
 let ballStart = {x:0,y:0}, ball = {x:0,y:0,vx:0,vy:0,moving:false,r:16}, hoop = {x:-999,y:-999,dir:1}, hoopVX=30, timeLeft=30, made=0, target=5, combo=0;
 let dragging=false, dragStart=null, dragCur=null;
@@ -171,7 +173,7 @@ function resetBall(){
 function winLevel(){
   state='win';
   const earnedCoins = 10 + Math.floor(timeLeft)*2 + level*3;
-  coins += earnedCoins; localStorage.setItem('hm_coins', coins);
+  coins += earnedCoins; safeSet('hm_coins', coins);
   const starCount = timeLeft > 12 ? 3 : timeLeft > 5 ? 2 : 1;
   document.getElementById('starsDisplay').innerHTML =
     Array.from({length:3},(_,i)=> i<starCount ? '★' : '<span class="star-dim">★</span>').join('');
@@ -266,7 +268,7 @@ document.getElementById('resumeBtn').onclick = () => { hide('pauseScreen'); stat
 document.getElementById('restartBtnPause').onclick = () => { hide('pauseScreen'); resetGame(); state='playing'; };
 document.getElementById('retryBtn').onclick = () => { hide('overScreen'); resetGame(); state='playing'; };
 document.getElementById('nextBtn').onclick = () => {
-  hide('winScreen'); level++; localStorage.setItem('hm_level', level); resetGame(); state='playing';
+  hide('winScreen'); level++; safeSet('hm_level', level); resetGame(); state='playing';
 };
 </script>
 </body>
